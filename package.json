@@ -1,18 +1,21 @@
 {
-  "name": "pazzle",
-  "version": "0.0.1",
-  "description": "Like Live RssReader Debug",
-  "author": "Arc Cosine",
-  "license": "MIT License",
-  "repository": {
-    "type": "git",
-    "url": ""
+  "name": "llr",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
   },
   "devDependencies": {
-    "grunt": "~1.4.0",
-    "grunt-contrib-connect": "~3.0.0",
-    "grunt-contrib-copy": "~1.0.0",
-    "grunt-contrib-less": "~3.0.0",
-    "grunt-contrib-watch": "~1.1.0"
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "@vitejs/plugin-react": "^1.3.0",
+    "typescript": "^4.6.3",
+    "vite": "^2.9.9"
   }
 }
