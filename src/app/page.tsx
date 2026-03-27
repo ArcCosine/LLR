@@ -316,10 +316,10 @@ export default function Home() {
 
   return (
     <div className={`flex h-full w-full overflow-hidden bg-white text-gray-800 ${FONT_SIZES[fontSizeIndex]}`}>
-      {/* Left Pane: Subscriptions (Full height between header and footer) */}
+      {/* Left Pane: Feeds (Full height between header and footer) */}
       <nav className="w-64 flex-shrink-0 border-r border-gray-300 flex flex-col bg-gray-50 overflow-hidden">
         <div className="px-3 py-2 font-bold border-b border-gray-300 bg-gray-200">
-          Subscriptions
+          Feeds
         </div>
         <div ref={subListRef} className="flex-1 overflow-y-auto">
           {subscriptions.map((sub, index) => {
@@ -354,8 +354,8 @@ export default function Home() {
       <div className="flex-1 flex flex-col min-w-0 h-full">
         {/* Top Right: Articles List */}
         <section className="h-1/3 border-b border-gray-300 flex flex-col min-h-[150px] overflow-hidden">
-          <div className="px-3 py-2 font-bold bg-gray-200 border-b border-gray-300">
-            Articles
+          <div className="px-3 py-2 font-bold bg-gray-200 border-b border-gray-300 truncate">
+            Articles {selectedSubIndex >= 0 && subscriptions[selectedSubIndex] ? ` - ${subscriptions[selectedSubIndex].title}` : ""}
           </div>
           <div ref={articleListRef} className="flex-1 overflow-y-auto">
             {articles.length === 0 ? (
@@ -491,8 +491,8 @@ export default function Home() {
               <section>
                 <h4 className="font-semibold text-gray-500 text-xs uppercase tracking-wider mb-2">ナビゲーション</h4>
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="flex items-center gap-2"><kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">a</kbd> <span>前の購読</span></div>
-                  <div className="flex items-center gap-2"><kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">s</kbd> <span>次の購読</span></div>
+                  <div className="flex items-center gap-2"><kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">a</kbd> <span>前のフィード</span></div>
+                  <div className="flex items-center gap-2"><kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">s</kbd> <span>次のフィード</span></div>
                   <div className="flex items-center gap-2"><kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">k</kbd> <span>前の記事</span></div>
                   <div className="flex items-center gap-2"><kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">j</kbd> <span>次の記事</span></div>
                 </div>

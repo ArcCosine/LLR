@@ -43,7 +43,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="/export.xml" />
       </head>
       <body className="h-screen flex flex-col overflow-hidden">
-        <header className="bg-gray-800 text-white px-4 py-2 flex-shrink-0 shadow-md z-10 flex items-center gap-2">
+        <header className="bg-[#fae7ca] text-black px-4 py-2 flex-shrink-0 shadow-md z-10 flex items-center gap-2">
           <img src="/favicon.svg" alt="LLR Logo" className="w-6 h-6" />
           <h1 className="text-lg font-bold tracking-tight">LLR</h1>
         </header>
