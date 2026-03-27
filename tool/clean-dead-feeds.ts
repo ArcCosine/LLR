@@ -8,7 +8,8 @@ const OUTPUT_FILE = 'public/export-cleaned-v2.xml';
 const BLACKLIST_DOMAINS = [
   'blog.excite.co.jp',
   'my.opera.com',
-  'd.hatena.ne.jp'
+  'd.hatena.ne.jp',
+  'www.nicovideo.jp'
 ];
 
 async function fetchArticleCount(url: string): Promise<number> {
