@@ -1,4 +1,4 @@
-import { atomWithStorage } from 'jotai/utils';
+import { atomWithStorage } from "jotai/utils";
 
 export const FONT_SIZES = [
   "text-base",
@@ -8,7 +8,7 @@ export const FONT_SIZES = [
   "text-3xl",
   "text-4xl",
   "text-5xl",
-  "text-6xl"
+  "text-6xl",
 ];
 
-export const fontSizeAtom = atomWithStorage<number>('llr-font-size-index', 0);
+export const fontSizeAtom = atomWithStorage<number>("llr-font-size-index", 0);

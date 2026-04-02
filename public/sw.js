@@ -1,29 +1,34 @@
-const CACHE_NAME = 'llr-prefetch-cache-v1';
+const CACHE_NAME = "llr-prefetch-cache-v2";
+const DEFAULT_API_BASE_URL = "https://llr-cf-workers.arc-6e4.workers.dev";
 
-self.addEventListener('install', (event) => {
+function buildRssRequestUrl(url, apiBaseUrl = DEFAULT_API_BASE_URL) {
+  return `${apiBaseUrl.replace(/\/$/, "")}/api/rss?url=${encodeURIComponent(url)}`;
+}
+
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
-self.addEventListener('activate', (event) => {
+self.addEventListener("activate", (event) => {
   event.waitUntil(clients.claim());
 });
 
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'PREFETCH_RSS') {
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "PREFETCH_RSS") {
     const urls = event.data.urls;
-    event.waitUntil(prefetchUrls(urls));
+    const apiBaseUrl = event.data.apiBaseUrl || DEFAULT_API_BASE_URL;
+    event.waitUntil(prefetchUrls(urls, apiBaseUrl));
   }
 });
 
-async function prefetchUrls(urls) {
+async function prefetchUrls(urls, apiBaseUrl) {
   const cache = await caches.open(CACHE_NAME);
   for (const url of urls) {
     try {
-      // Use the proxy URL to prefetch
-      const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
-      const response = await fetch(proxyUrl);
+      const requestUrl = buildRssRequestUrl(url, apiBaseUrl);
+      const response = await fetch(requestUrl, { mode: "cors" });
       if (response.ok) {
-        await cache.put(proxyUrl, response);
+        await cache.put(requestUrl, response.clone());
         console.log(`[SW] Prefetched: ${url}`);
       }
     } catch (error) {
@@ -32,14 +37,13 @@ async function prefetchUrls(urls) {
   }
 }
 
-// Intercept fetch requests to serve from prefetch cache
-self.addEventListener('fetch', (event) => {
+self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
-  if (url.pathname === '/api/proxy') {
+  if (url.pathname === "/api/rss") {
     event.respondWith(
       caches.match(event.request).then((response) => {
         return response || fetch(event.request);
-      })
+      }),
     );
   }
 });

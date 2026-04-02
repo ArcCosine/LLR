@@ -1,15 +1,15 @@
-import fs from 'fs';
-import { parse } from 'node-html-parser';
+import fs from "node:fs";
+import { parse } from "node-html-parser";
 
-const INPUT_FILE = 'public/export.xml';
-const OUTPUT_FILE = 'public/export-cleaned-v2.xml';
+const INPUT_FILE = "public/export.xml";
+const OUTPUT_FILE = "public/export-cleaned-v2.xml";
 
 // 無条件で削除するドメイン
 const BLACKLIST_DOMAINS = [
-  'blog.excite.co.jp',
-  'my.opera.com',
-  'd.hatena.ne.jp',
-  'www.nicovideo.jp'
+  "blog.excite.co.jp",
+  "my.opera.com",
+  "d.hatena.ne.jp",
+  "www.nicovideo.jp",
 ];
 
 async function fetchArticleCount(url: string): Promise<number> {
@@ -18,11 +18,15 @@ async function fetchArticleCount(url: string): Promise<number> {
     if (!response.ok) return 0;
 
     const buffer = await response.arrayBuffer();
-    
+
     // エンコーディングの判定
     const peekDecoder = new TextDecoder("utf-8");
-    const peekString = peekDecoder.decode(new Uint8Array(buffer.slice(0, 1024)));
-    const encodingMatch = peekString.match(/<\?xml[^?>]+encoding=["']([^"']+)["']/i);
+    const peekString = peekDecoder.decode(
+      new Uint8Array(buffer.slice(0, 1024)),
+    );
+    const encodingMatch = peekString.match(
+      /<\?xml[^?>]+encoding=["']([^"']+)["']/i,
+    );
     const charset = encodingMatch ? encodingMatch[1] : "utf-8";
 
     const decoder = new TextDecoder(charset);
@@ -30,20 +34,20 @@ async function fetchArticleCount(url: string): Promise<number> {
     const root = parse(xmlText);
 
     // RSS (item) または Atom (entry) の数をカウント
-    const items = root.querySelectorAll('item');
-    const entries = root.querySelectorAll('entry');
-    
+    const items = root.querySelectorAll("item");
+    const entries = root.querySelectorAll("entry");
+
     return items.length + entries.length;
-  } catch (e) {
+  } catch (_e) {
     return 0; // 取得失敗も0件扱いとする
   }
 }
 
 async function run() {
   console.log(`Reading ${INPUT_FILE}...`);
-  const opmlText = fs.readFileSync(INPUT_FILE, 'utf-8');
+  const opmlText = fs.readFileSync(INPUT_FILE, "utf-8");
   const root = parse(opmlText);
-  const outlines = root.querySelectorAll('outline[xmlUrl]');
+  const outlines = root.querySelectorAll("outline[xmlUrl]");
 
   console.log(`Found ${outlines.length} subscriptions. Cleaning up...`);
 
@@ -55,28 +59,37 @@ async function run() {
   const concurrency = 15;
   for (let i = 0; i < outlines.length; i += concurrency) {
     const chunk = outlines.slice(i, i + concurrency);
-    await Promise.all(chunk.map(async (outline) => {
-      const xmlUrl = outline.getAttribute('xmlUrl') || '';
-      const title = outline.getAttribute('title') || outline.getAttribute('text') || 'No Title';
-      
-      if (!xmlUrl) return;
+    await Promise.all(
+      chunk.map(async (outline) => {
+        const xmlUrl = outline.getAttribute("xmlUrl") || "";
+        const title =
+          outline.getAttribute("title") ||
+          outline.getAttribute("text") ||
+          "No Title";
 
-      // 1. 無条件削除ドメインのチェック
-      const isBlacklisted = BLACKLIST_DOMAINS.some(domain => xmlUrl.includes(domain));
-      if (isBlacklisted) {
-        removedByDomain.push(`${title} (${xmlUrl})`);
-        return;
-      }
+        if (!xmlUrl) return;
 
-      // 2. 記事数のチェック
-      const count = await fetchArticleCount(xmlUrl);
-      if (count === 0) {
-        removedByEmpty.push(`${title} (${xmlUrl})`);
-      } else {
-        activeOutlines.push(outline.toString());
-      }
-    }));
-    console.log(`Progress: ${Math.min(i + concurrency, outlines.length)}/${outlines.length}`);
+        // 1. 無条件削除ドメインのチェック
+        const isBlacklisted = BLACKLIST_DOMAINS.some((domain) =>
+          xmlUrl.includes(domain),
+        );
+        if (isBlacklisted) {
+          removedByDomain.push(`${title} (${xmlUrl})`);
+          return;
+        }
+
+        // 2. 記事数のチェック
+        const count = await fetchArticleCount(xmlUrl);
+        if (count === 0) {
+          removedByEmpty.push(`${title} (${xmlUrl})`);
+        } else {
+          activeOutlines.push(outline.toString());
+        }
+      }),
+    );
+    console.log(
+      `Progress: ${Math.min(i + concurrency, outlines.length)}/${outlines.length}`,
+    );
   }
 
   console.log(`\nResults:`);
@@ -92,7 +105,7 @@ async function run() {
 </head>
 <body>
 <outline title="Subscriptions">
-    ${activeOutlines.join('\n    ')}
+    ${activeOutlines.join("\n    ")}
 </outline>
 </body>
 </opml>`;

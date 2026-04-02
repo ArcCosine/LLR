@@ -38,7 +38,10 @@ export async function getCache(xmlUrl: string): Promise<CacheEntry | null> {
   });
 }
 
-export async function setCache(xmlUrl: string, articles: Article[]): Promise<void> {
+export async function setCache(
+  xmlUrl: string,
+  articles: Article[],
+): Promise<void> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORE_NAME, "readwrite");

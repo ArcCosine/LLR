@@ -1,7 +1,7 @@
 {
   "name": "LLR Reader",
   "short_name": "LLR",
-  "description": "Next.js RSS Reader",
+  "description": "RSS reader powered by Vite and Cloudflare Workers",
   "icons": [
     {
       "src": "/favicon-96x96.png",
