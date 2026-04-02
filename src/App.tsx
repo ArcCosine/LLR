@@ -7,10 +7,18 @@ import { ClearCacheDialog } from "@/components/ClearCacheDialog";
 import { FeedList } from "@/components/FeedList";
 import { HelpDialog } from "@/components/HelpDialog";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { OpmlImportPanel } from "@/components/OpmlImportPanel";
 import { FONT_SIZES, fontSizeAtom } from "@/lib/atoms";
-import { clearAllCache, getCache, setCache } from "@/lib/db";
+import {
+  clearAllCache,
+  getCache,
+  getStoredOpml,
+  replaceStoredOpml,
+  setCache,
+} from "@/lib/db";
 import {
   buildRssRequestUrl,
+  parseSubscriptionsFromOpml,
   parseArticlesFromXml,
   RSS_API_BASE_URL,
 } from "@/lib/feed";
@@ -27,6 +35,9 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [showHelpDialog, setShowHelpDialog] = useState(false);
+  const [showImportPanel, setShowImportPanel] = useState(false);
+  const [importBusy, setImportBusy] = useState(false);
+  const [importError, setImportError] = useState("");
   const [fontSizeIndex, setFontSizeIndex] = useAtom(fontSizeAtom);
 
   const subListRef = useRef<HTMLDivElement>(null);
@@ -99,34 +110,29 @@ export default function App() {
   }, [selectedSubIndex, subscriptions]);
 
   useEffect(() => {
-    const fetchOPML = async () => {
+    const loadStoredOpml = async () => {
       try {
-        const response = await fetch("/export.xml");
-        const xmlText = await response.text();
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-        const outlines = xmlDoc.querySelectorAll("outline[xmlUrl]");
+        const storedOpml = await getStoredOpml();
 
-        const subs: Subscription[] = Array.from(outlines).map((node) => ({
-          title:
-            node.getAttribute("title") ||
-            node.getAttribute("text") ||
-            "No Title",
-          xmlUrl: node.getAttribute("xmlUrl") || "",
-          htmlUrl: node.getAttribute("htmlUrl") || "",
-          unreadCount: Math.floor(Math.random() * 10),
-        }));
+        if (!storedOpml) {
+          setShowImportPanel(true);
+          return;
+        }
 
+        const subs = parseSubscriptionsFromOpml(storedOpml.text);
         setSubscriptions(subs);
-        if (subs.length > 0) setSelectedSubIndex(0);
+        setSelectedSubIndex(subs.length > 0 ? 0 : -1);
+        setShowImportPanel(subs.length === 0);
       } catch (error) {
         console.error("Failed to load OPML:", error);
+        setShowImportPanel(true);
+        setImportError("保存済みOPMLの読み込みに失敗しました。再度取り込んでください。");
       } finally {
         setLoading(false);
       }
     };
 
-    void fetchOPML();
+    void loadStoredOpml();
   }, []);
 
   useEffect(() => {
@@ -237,7 +243,7 @@ export default function App() {
         return;
       }
 
-      if (showClearDialog || showHelpDialog) return;
+      if (showClearDialog || showHelpDialog || showImportPanel) return;
 
       switch (event.key) {
         case "a":
@@ -310,6 +316,7 @@ export default function App() {
     articles,
     showClearDialog,
     showHelpDialog,
+    showImportPanel,
     selectedArticleIndex,
     setFontSizeIndex,
   ]);
@@ -327,27 +334,79 @@ export default function App() {
     return <LoadingScreen />;
   }
 
+  const handleImport = async (file: File) => {
+    setImportBusy(true);
+    setImportError("");
+
+    try {
+      const xmlText = await file.text();
+      const nextSubscriptions = parseSubscriptionsFromOpml(xmlText);
+
+      if (nextSubscriptions.length === 0) {
+        throw new Error("フィードが1件も見つかりませんでした。");
+      }
+
+      await replaceStoredOpml(file.name, xmlText);
+      setSubscriptions(nextSubscriptions);
+      setSelectedSubIndex(0);
+      setArticles([]);
+      setSelectedArticleIndex(-1);
+      setShowImportPanel(false);
+    } catch (error) {
+      console.error("Failed to import OPML:", error);
+      setImportError(
+        error instanceof Error
+          ? error.message
+          : "OPMLの読み込みに失敗しました。",
+      );
+    } finally {
+      setImportBusy(false);
+    }
+  };
+
   return (
     <div className="flex h-screen flex-col overflow-hidden">
-      <AppHeader />
+      <AppHeader onShowImport={() => setShowImportPanel(true)} />
 
-      <div
-        className={`flex min-h-0 flex-1 overflow-hidden bg-white text-gray-800 ${FONT_SIZES[fontSizeIndex]}`}
-      >
-        <FeedList
-          subscriptions={subscriptions}
-          selectedSubIndex={selectedSubIndex}
-          onSelectSubscription={setSelectedSubIndex}
-          subListRef={subListRef}
-        />
-        <ArticlePane
-          articles={articles}
-          articleRefs={articleRefs}
-          contentAreaRef={contentAreaRef}
-          fontSizeIndex={fontSizeIndex}
-          selectedArticleIndex={selectedArticleIndex}
-          selectedSubscription={subscriptions[selectedSubIndex]}
-        />
+      <div className="relative min-h-0 flex-1">
+        {!subscriptions.length && showImportPanel ? (
+          <OpmlImportPanel
+            busy={importBusy}
+            errorMessage={importError}
+            hasSubscriptions={false}
+            onClose={() => setShowImportPanel(false)}
+            onImport={handleImport}
+          />
+        ) : (
+          <div
+            className={`flex h-full min-h-0 overflow-hidden bg-white text-gray-800 ${FONT_SIZES[fontSizeIndex]}`}
+          >
+            <FeedList
+              subscriptions={subscriptions}
+              selectedSubIndex={selectedSubIndex}
+              onSelectSubscription={setSelectedSubIndex}
+              subListRef={subListRef}
+            />
+            <ArticlePane
+              articles={articles}
+              articleRefs={articleRefs}
+              contentAreaRef={contentAreaRef}
+              fontSizeIndex={fontSizeIndex}
+              selectedArticleIndex={selectedArticleIndex}
+              selectedSubscription={subscriptions[selectedSubIndex]}
+            />
+          </div>
+        )}
+
+        {subscriptions.length > 0 && showImportPanel && (
+          <OpmlImportPanel
+            busy={importBusy}
+            errorMessage={importError}
+            hasSubscriptions
+            onClose={() => setShowImportPanel(false)}
+            onImport={handleImport}
+          />
+        )}
       </div>
 
       <AppFooter />

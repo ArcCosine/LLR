@@ -1,4 +1,4 @@
-import type { Article } from "@/types";
+import type { Article, Subscription } from "@/types";
 
 export const RSS_API_BASE_URL =
   import.meta.env.VITE_RSS_API_BASE_URL ||
@@ -37,4 +37,24 @@ export function parseArticlesFromXml(xmlText: string): Article[] {
 
     return { title, link, content, pubDate };
   });
+}
+
+export function parseSubscriptionsFromOpml(xmlText: string): Subscription[] {
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+  const parserError = xmlDoc.querySelector("parsererror");
+
+  if (parserError) {
+    throw new Error("OPMLの解析に失敗しました。");
+  }
+
+  return Array.from(xmlDoc.querySelectorAll("outline[xmlUrl]"))
+    .map((node) => ({
+      title:
+        node.getAttribute("title") || node.getAttribute("text") || "No Title",
+      xmlUrl: node.getAttribute("xmlUrl") || "",
+      htmlUrl: node.getAttribute("htmlUrl") || "",
+      unreadCount: 0,
+    }))
+    .filter((subscription) => subscription.xmlUrl.length > 0);
 }

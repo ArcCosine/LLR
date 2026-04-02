@@ -1,13 +1,22 @@
 import type { Article } from "@/types";
 
 const DB_NAME = "llr-reader-db";
-const STORE_NAME = "rss-cache";
-const DB_VERSION = 1;
+const RSS_CACHE_STORE_NAME = "rss-cache";
+const OPML_STORE_NAME = "opml-files";
+const OPML_ENTRY_ID = "active-opml";
+const DB_VERSION = 2;
 
 export interface CacheEntry {
   xmlUrl: string;
   articles: Article[];
   timestamp: number;
+}
+
+export interface OpmlEntry {
+  id: typeof OPML_ENTRY_ID;
+  fileName: string;
+  text: string;
+  importedAt: number;
 }
 
 export function openDB(): Promise<IDBDatabase> {
@@ -19,8 +28,11 @@ export function openDB(): Promise<IDBDatabase> {
 
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: "xmlUrl" });
+      if (!db.objectStoreNames.contains(RSS_CACHE_STORE_NAME)) {
+        db.createObjectStore(RSS_CACHE_STORE_NAME, { keyPath: "xmlUrl" });
+      }
+      if (!db.objectStoreNames.contains(OPML_STORE_NAME)) {
+        db.createObjectStore(OPML_STORE_NAME, { keyPath: "id" });
       }
     };
   });
@@ -29,12 +41,18 @@ export function openDB(): Promise<IDBDatabase> {
 export async function getCache(xmlUrl: string): Promise<CacheEntry | null> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, "readonly");
-    const store = transaction.objectStore(STORE_NAME);
+    const transaction = db.transaction(RSS_CACHE_STORE_NAME, "readonly");
+    const store = transaction.objectStore(RSS_CACHE_STORE_NAME);
     const request = store.get(xmlUrl);
 
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => {
+      db.close();
+      reject(request.error);
+    };
+    request.onsuccess = () => {
+      db.close();
+      resolve(request.result || null);
+    };
   });
 }
 
@@ -44,8 +62,8 @@ export async function setCache(
 ): Promise<void> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, "readwrite");
-    const store = transaction.objectStore(STORE_NAME);
+    const transaction = db.transaction(RSS_CACHE_STORE_NAME, "readwrite");
+    const store = transaction.objectStore(RSS_CACHE_STORE_NAME);
     const entry: CacheEntry = {
       xmlUrl,
       articles,
@@ -53,19 +71,87 @@ export async function setCache(
     };
     const request = store.put(entry);
 
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve();
+    request.onerror = () => {
+      db.close();
+      reject(request.error);
+    };
+    request.onsuccess = () => {
+      db.close();
+      resolve();
+    };
   });
 }
 
 export async function clearAllCache(): Promise<void> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, "readwrite");
-    const store = transaction.objectStore(STORE_NAME);
+    const transaction = db.transaction(RSS_CACHE_STORE_NAME, "readwrite");
+    const store = transaction.objectStore(RSS_CACHE_STORE_NAME);
     const request = store.clear();
 
+    request.onerror = () => {
+      db.close();
+      reject(request.error);
+    };
+    request.onsuccess = () => {
+      db.close();
+      resolve();
+    };
+  });
+}
+
+export async function getStoredOpml(): Promise<OpmlEntry | null> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(OPML_STORE_NAME, "readonly");
+    const store = transaction.objectStore(OPML_STORE_NAME);
+    const request = store.get(OPML_ENTRY_ID);
+
+    request.onerror = () => {
+      db.close();
+      reject(request.error);
+    };
+    request.onsuccess = () => {
+      db.close();
+      resolve(request.result || null);
+    };
+  });
+}
+
+export async function replaceStoredOpml(
+  fileName: string,
+  text: string,
+): Promise<void> {
+  await deleteDatabase();
+
+  const db = await openDB();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(OPML_STORE_NAME, "readwrite");
+    const store = transaction.objectStore(OPML_STORE_NAME);
+    const request = store.put({
+      id: OPML_ENTRY_ID,
+      fileName,
+      text,
+      importedAt: Date.now(),
+    } satisfies OpmlEntry);
+
+    request.onerror = () => {
+      db.close();
+      reject(request.error);
+    };
+    request.onsuccess = () => resolve();
+  });
+
+  db.close();
+}
+
+function deleteDatabase(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.deleteDatabase(DB_NAME);
+
     request.onerror = () => reject(request.error);
+    request.onblocked = () =>
+      reject(new Error("IndexedDB deletion blocked by another open tab."));
     request.onsuccess = () => resolve();
   });
 }
