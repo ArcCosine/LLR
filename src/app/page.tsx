@@ -1,12 +1,183 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import type { Article, Subscription } from "@/types";
-import { getCache, setCache, clearAllCache } from "@/lib/db";
 import { useAtom } from "jotai";
-import { fontSizeAtom, FONT_SIZES } from "@/lib/atoms";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import { FONT_SIZES, fontSizeAtom } from "@/lib/atoms";
+import { clearAllCache, getCache, setCache } from "@/lib/db";
+import type { Article, Subscription } from "@/types";
 
 const CACHE_EXPIRATION_MS = 1000 * 60 * 30; // 30 minutes
+const PAGE_SCROLL_RATIO = 0.9;
+
+function getSafeUrl(url: string | null): string | undefined {
+  if (!url) return undefined;
+  if (
+    url.startsWith("http://") ||
+    url.startsWith("https://") ||
+    url.startsWith("mailto:") ||
+    url.startsWith("/")
+  ) {
+    return url;
+  }
+  return undefined;
+}
+
+function renderHtmlNode(node: ChildNode, key: string): ReactNode {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return node.textContent;
+  }
+
+  if (node.nodeType !== Node.ELEMENT_NODE) {
+    return null;
+  }
+
+  const element = node as HTMLElement;
+  const tag = element.tagName.toLowerCase();
+  const children = Array.from(element.childNodes).map((child, index) =>
+    renderHtmlNode(child, `${key}-${index}`),
+  );
+
+  switch (tag) {
+    case "h1":
+      return (
+        <h1 key={key} className="text-3xl font-bold mt-8 mb-4">
+          {children}
+        </h1>
+      );
+    case "h2":
+      return (
+        <h2 key={key} className="text-2xl font-bold mt-8 mb-4">
+          {children}
+        </h2>
+      );
+    case "h3":
+      return (
+        <h3 key={key} className="text-xl font-bold mt-6 mb-3">
+          {children}
+        </h3>
+      );
+    case "h4":
+    case "h5":
+    case "h6":
+      return (
+        <h4 key={key} className="text-lg font-semibold mt-6 mb-3">
+          {children}
+        </h4>
+      );
+    case "p":
+      return (
+        <p key={key} className="mb-4 leading-7">
+          {children}
+        </p>
+      );
+    case "a": {
+      const href = getSafeUrl(element.getAttribute("href"));
+      return (
+        <a
+          key={key}
+          href={href}
+          target={href?.startsWith("http") ? "_blank" : undefined}
+          rel={href?.startsWith("http") ? "noopener noreferrer" : undefined}
+          className="text-blue-600 underline"
+        >
+          {children}
+        </a>
+      );
+    }
+    case "ul":
+      return (
+        <ul key={key} className="mb-4 list-disc pl-6">
+          {children}
+        </ul>
+      );
+    case "ol":
+      return (
+        <ol key={key} className="mb-4 list-decimal pl-6">
+          {children}
+        </ol>
+      );
+    case "li":
+      return (
+        <li key={key} className="mb-1">
+          {children}
+        </li>
+      );
+    case "blockquote":
+      return (
+        <blockquote
+          key={key}
+          className="my-4 border-l-4 border-gray-300 pl-4 text-gray-700"
+        >
+          {children}
+        </blockquote>
+      );
+    case "pre":
+      return (
+        <pre
+          key={key}
+          className="mb-4 overflow-x-auto rounded bg-gray-100 p-4 text-sm"
+        >
+          {children}
+        </pre>
+      );
+    case "code":
+      return (
+        <code
+          key={key}
+          className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.9em]"
+        >
+          {children}
+        </code>
+      );
+    case "img": {
+      const src = getSafeUrl(element.getAttribute("src"));
+      const alt = element.getAttribute("alt") || "";
+      return src ? (
+        <img key={key} src={src} alt={alt} className="my-6 h-auto max-w-full" />
+      ) : null;
+    }
+    case "br":
+      return <br key={key} />;
+    case "hr":
+      return <hr key={key} className="my-6 border-gray-200" />;
+    case "strong":
+    case "b":
+      return <strong key={key}>{children}</strong>;
+    case "em":
+    case "i":
+      return <em key={key}>{children}</em>;
+    case "figure":
+      return (
+        <figure key={key} className="my-6">
+          {children}
+        </figure>
+      );
+    case "figcaption":
+      return (
+        <figcaption key={key} className="mt-2 text-sm text-gray-500">
+          {children}
+        </figcaption>
+      );
+    case "div":
+    case "span":
+    case "section":
+    case "article":
+      return <div key={key}>{children}</div>;
+    default:
+      return <>{children}</>;
+  }
+}
+
+function renderArticleContent(content: string): ReactNode {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const doc = new DOMParser().parseFromString(content, "text/html");
+  return Array.from(doc.body.childNodes).map((node, index) =>
+    renderHtmlNode(node, `article-${index}`),
+  );
+}
 
 export default function Home() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -19,8 +190,9 @@ export default function Home() {
   const [fontSizeIndex, setFontSizeIndex] = useAtom(fontSizeAtom);
 
   const subListRef = useRef<HTMLDivElement>(null);
-  const articleListRef = useRef<HTMLDivElement>(null);
   const contentAreaRef = useRef<HTMLElement>(null);
+  const articleRefs = useRef<(HTMLElement | null)[]>([]);
+  const pendingKeyboardArticleNavRef = useRef(false);
 
   // Register Service Worker
   useEffect(() => {
@@ -206,12 +378,62 @@ export default function Home() {
     fetchRSS();
   }, [selectedSubIndex, subscriptions]);
 
-  // Scroll content to top when article changes
+  // Scroll to the active article block when article navigation changes
   useEffect(() => {
-    if (selectedArticleIndex >= 0 && contentAreaRef.current) {
-      contentAreaRef.current.scrollTo(0, 0);
+    if (pendingKeyboardArticleNavRef.current && selectedArticleIndex >= 0) {
+      articleRefs.current[selectedArticleIndex]?.scrollIntoView({
+        block: "start",
+        behavior: "smooth",
+      });
+      pendingKeyboardArticleNavRef.current = false;
     }
   }, [selectedArticleIndex]);
+
+  // Sync the current article index with the article currently in view.
+  useEffect(() => {
+    const contentArea = contentAreaRef.current;
+    if (!contentArea || articles.length === 0) return;
+
+    let frameId = 0;
+
+    const updateSelectedArticleIndex = () => {
+      frameId = 0;
+      const containerRect = contentArea.getBoundingClientRect();
+      const targetY = containerRect.top + 40;
+
+      let currentIndex = 0;
+      for (let index = 0; index < articles.length; index += 1) {
+        const article = articleRefs.current[index];
+        if (!article) continue;
+
+        const articleTop = article.getBoundingClientRect().top;
+        if (articleTop <= targetY) {
+          currentIndex = index;
+        } else {
+          break;
+        }
+      }
+
+      setSelectedArticleIndex((prev) =>
+        prev === currentIndex ? prev : currentIndex,
+      );
+    };
+
+    const handleScroll = () => {
+      if (frameId !== 0) return;
+      frameId = window.requestAnimationFrame(updateSelectedArticleIndex);
+    };
+
+    updateSelectedArticleIndex();
+    contentArea.addEventListener("scroll", handleScroll);
+
+    return () => {
+      contentArea.removeEventListener("scroll", handleScroll);
+      if (frameId !== 0) {
+        window.cancelAnimationFrame(frameId);
+      }
+    };
+  }, [articles]);
 
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -242,9 +464,13 @@ export default function Home() {
           );
           break;
         case "k": // Previous Article
+          e.preventDefault();
+          pendingKeyboardArticleNavRef.current = true;
           setSelectedArticleIndex((prev) => Math.max(0, prev - 1));
           break;
         case "j": // Next Article
+          e.preventDefault();
+          pendingKeyboardArticleNavRef.current = true;
           setSelectedArticleIndex((prev) =>
             Math.min(articles.length - 1, prev + 1),
           );
@@ -269,10 +495,11 @@ export default function Home() {
         case " ": // Space: Scroll Down / Shift+Space: Scroll Up
           if (contentAreaRef.current) {
             e.preventDefault();
-            const scrollAmount = contentAreaRef.current.clientHeight * 0.8;
+            const scrollAmount =
+              contentAreaRef.current.clientHeight * PAGE_SCROLL_RATIO;
             contentAreaRef.current.scrollBy({
               top: e.shiftKey ? -scrollAmount : scrollAmount,
-              behavior: "smooth",
+              behavior: "auto",
             });
           }
           break;
@@ -283,7 +510,7 @@ export default function Home() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     subscriptions.length,
-    articles.length,
+    articles,
     showClearDialog,
     showHelpDialog,
     selectedArticleIndex,
@@ -298,14 +525,7 @@ export default function Home() {
     if (activeSub) {
       activeSub.scrollIntoView({ block: "start", behavior: "smooth" });
     }
-  }, [selectedSubIndex]);
-
-  useEffect(() => {
-    const activeArticle = articleListRef.current?.querySelector(
-      "[data-selected='true']",
-    );
-    activeArticle?.scrollIntoView({ block: "nearest" });
-  }, [selectedArticleIndex]);
+  });
 
   if (loading)
     return (
@@ -315,7 +535,9 @@ export default function Home() {
     );
 
   return (
-    <div className={`flex h-full w-full overflow-hidden bg-white text-gray-800 ${FONT_SIZES[fontSizeIndex]}`}>
+    <div
+      className={`flex h-full w-full overflow-hidden bg-white text-gray-800 ${FONT_SIZES[fontSizeIndex]}`}
+    >
       {/* Left Pane: Feeds (Full height between header and footer) */}
       <nav className="w-64 flex-shrink-0 border-r border-gray-300 flex flex-col bg-gray-50 overflow-hidden">
         <div className="px-3 py-2 font-bold border-b border-gray-300 bg-gray-200">
@@ -331,9 +553,7 @@ export default function Home() {
                 onClick={() => setSelectedSubIndex(index)}
                 data-selected={isSelected}
                 className={`w-full text-left px-3 py-1.5 cursor-pointer border-b border-gray-200 flex justify-between items-center outline-none ${
-                  isSelected
-                    ? "bg-blue-100 font-bold"
-                    : "hover:bg-gray-100"
+                  isSelected ? "bg-blue-100 font-bold" : "hover:bg-gray-100"
                 }`}
               >
                 <span className="truncate flex-1" title={sub.title}>
@@ -350,84 +570,77 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Right Side: Split into Top Right and Bottom Right */}
+      {/* Right Pane: Current Article */}
       <div className="flex-1 flex flex-col min-w-0 h-full">
-        {/* Top Right: Articles List */}
-        <section className="h-1/3 border-b border-gray-300 flex flex-col min-h-[150px] overflow-hidden">
-          <div className="px-3 py-2 font-bold bg-gray-200 border-b border-gray-300 truncate">
-            Articles {selectedSubIndex >= 0 && subscriptions[selectedSubIndex] ? ` - ${subscriptions[selectedSubIndex].title}` : ""}
+        <section className="border-b border-gray-300 bg-gray-200 px-3 py-2">
+          <div className="truncate font-bold">
+            Articles{" "}
+            {selectedSubIndex >= 0 && subscriptions[selectedSubIndex]
+              ? `- ${subscriptions[selectedSubIndex].title}`
+              : ""}
           </div>
-          <div ref={articleListRef} className="flex-1 overflow-y-auto">
-            {articles.length === 0 ? (
-              <div className="p-4 text-gray-400">No articles found.</div>
-            ) : (
-              articles.map((article, index) => {
-                const isSelected = index === selectedArticleIndex;
-                return (
-                  <button
-                    type="button"
-                    key={article.link || index}
-                    onClick={() => setSelectedArticleIndex(index)}
-                    data-selected={isSelected}
-                    className={`w-full text-left px-3 py-1.5 cursor-pointer border-b border-gray-100 outline-none ${
-                      isSelected
-                        ? "bg-blue-50 font-semibold"
-                        : "hover:bg-gray-100"
-                    }`}
-                  >
-                    <div className="flex justify-between">
-                      <span className="truncate">{article.title}</span>
-                      <span className="text-xs text-gray-400 ml-2 flex-shrink-0">
-                        {article.pubDate.split(" ").slice(0, 4).join(" ")}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })
-            )}
+          <div className="mt-1 text-xs text-gray-600">
+            {articles.length} articles
           </div>
         </section>
 
-        {/* Bottom Right: Article Content Rendering */}
         <main
           ref={contentAreaRef}
           className="flex-1 bg-white relative overflow-y-auto"
         >
-          {selectedArticleIndex >= 0 && articles[selectedArticleIndex] ? (
-            <article className="max-w-4xl mx-auto px-6 py-8">
-              <header className="mb-8 border-b border-gray-200 pb-4">
-                <h2 className="text-2xl font-bold mb-2">
-                  <a
-                    href={articles[selectedArticleIndex].link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:underline text-gray-900"
+          {articles.length > 0 ? (
+            <div className="max-w-4xl mx-auto px-6 py-8">
+              {articles.map((article, index) => (
+                <article
+                  key={article.link || index}
+                  ref={(node) => {
+                    articleRefs.current[index] = node;
+                  }}
+                  className={`pb-10 ${
+                    index === selectedArticleIndex ? "scroll-mt-0" : ""
+                  } ${index < articles.length - 1 ? "mb-10 border-b border-gray-200" : ""}`}
+                  data-selected={index === selectedArticleIndex}
+                >
+                  <header className="mb-8 border-b border-gray-100 pb-4">
+                    <h2
+                      className={`mb-3 rounded-md px-4 py-3 text-2xl font-bold ${
+                        index === selectedArticleIndex
+                          ? "bg-sky-100 text-sky-950"
+                          : "bg-slate-100 text-slate-900"
+                      }`}
+                    >
+                      <a
+                        href={article.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block hover:underline"
+                      >
+                        {article.title}
+                      </a>
+                    </h2>
+                    <div className="text-sm text-gray-500 flex justify-between gap-4">
+                      <span>{article.pubDate}</span>
+                      <a
+                        href={article.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline shrink-0"
+                      >
+                        Original Site →
+                      </a>
+                    </div>
+                  </header>
+                  <div
+                    className={`prose max-w-none ${FONT_SIZES[fontSizeIndex]}`}
                   >
-                    {articles[selectedArticleIndex].title}
-                  </a>
-                </h2>
-                <div className="text-sm text-gray-500 flex justify-between">
-                  <span>{articles[selectedArticleIndex].pubDate}</span>
-                  <a
-                    href={articles[selectedArticleIndex].link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline"
-                  >
-                    Original Site →
-                  </a>
-                </div>
-              </header>
-              <div
-                className={`prose max-w-none ${FONT_SIZES[fontSizeIndex]}`}
-                dangerouslySetInnerHTML={{
-                  __html: articles[selectedArticleIndex].content,
-                }}
-              />
-            </article>
+                    {renderArticleContent(article.content)}
+                  </div>
+                </article>
+              ))}
+            </div>
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-              Select an article to view its content.
+              No articles found.
             </div>
           )}
         </main>
@@ -468,17 +681,17 @@ export default function Home() {
       )}
       {/* Help Dialog */}
       {showHelpDialog && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 text-sm"
-          onClick={() => setShowHelpDialog(false)}
-        >
-          <div 
-            className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 text-sm">
+          <button
+            type="button"
+            aria-label="ヘルプを閉じる"
+            onClick={() => setShowHelpDialog(false)}
+            className="absolute inset-0"
+          />
+          <div className="relative bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold">キーボードショートカット</h3>
-              <button 
+              <button
                 type="button"
                 onClick={() => setShowHelpDialog(false)}
                 className="text-gray-400 hover:text-gray-600"
@@ -486,36 +699,107 @@ export default function Home() {
                 ✕
               </button>
             </div>
-            
+
             <div className="space-y-4">
               <section>
-                <h4 className="font-semibold text-gray-500 text-xs uppercase tracking-wider mb-2">ナビゲーション</h4>
+                <h4 className="font-semibold text-gray-500 text-xs uppercase tracking-wider mb-2">
+                  ナビゲーション
+                </h4>
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="flex items-center gap-2"><kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">a</kbd> <span>前のフィード</span></div>
-                  <div className="flex items-center gap-2"><kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">s</kbd> <span>次のフィード</span></div>
-                  <div className="flex items-center gap-2"><kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">k</kbd> <span>前の記事</span></div>
-                  <div className="flex items-center gap-2"><kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">j</kbd> <span>次の記事</span></div>
+                  <div className="flex items-center gap-2">
+                    <kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">
+                      a
+                    </kbd>{" "}
+                    <span>前のフィード</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">
+                      s
+                    </kbd>{" "}
+                    <span>次のフィード</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">
+                      k
+                    </kbd>{" "}
+                    <span>前の記事へスクロール</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">
+                      j
+                    </kbd>{" "}
+                    <span>次の記事へスクロール</span>
+                  </div>
                 </div>
               </section>
 
               <section>
-                <h4 className="font-semibold text-gray-500 text-xs uppercase tracking-wider mb-2">記事閲覧</h4>
+                <h4 className="font-semibold text-gray-500 text-xs uppercase tracking-wider mb-2">
+                  記事閲覧
+                </h4>
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="flex items-center gap-2"><kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">Space</kbd> <span>下にスクロール</span></div>
-                  <div className="flex items-center gap-2"><kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">Shift+Spc</kbd> <span>上にスクロール</span></div>
-                  <div className="flex items-center gap-2"><kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">o</kbd> <span>元のサイトを開く</span></div>
-                  <div className="flex items-center gap-2"><kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">&lt;</kbd> <span>文字を小さく</span></div>
-                  <div className="flex items-center gap-2"><kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">&gt;</kbd> <span>文字を大きく</span></div>
+                  <div className="flex items-center gap-2">
+                    <kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">
+                      Space
+                    </kbd>{" "}
+                    <span>ページダウン</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">
+                      Shift+Spc
+                    </kbd>{" "}
+                    <span>ページアップ</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">
+                      o
+                    </kbd>{" "}
+                    <span>元のサイトを開く</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">
+                      &lt;
+                    </kbd>{" "}
+                    <span>文字を小さく</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">
+                      &gt;
+                    </kbd>{" "}
+                    <span>文字を大きく</span>
+                  </div>
                 </div>
               </section>
 
               <section>
-                <h4 className="font-semibold text-gray-500 text-xs uppercase tracking-wider mb-2">システム</h4>
+                <h4 className="font-semibold text-gray-500 text-xs uppercase tracking-wider mb-2">
+                  システム
+                </h4>
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="flex items-center gap-2"><kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">c</kbd> <span>キャッシュをクリア</span></div>
-                  <div className="flex items-center gap-2"><kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">?</kbd> <span>ヘルプを表示</span></div>
-                  <div className="flex items-center gap-2"><kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">Esc</kbd> <span>ダイアログを閉じる</span></div>
-                  <div className="flex items-center gap-2"><kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">Ctrl+[</kbd> <span>ダイアログを閉じる</span></div>
+                  <div className="flex items-center gap-2">
+                    <kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">
+                      c
+                    </kbd>{" "}
+                    <span>キャッシュをクリア</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">
+                      ?
+                    </kbd>{" "}
+                    <span>ヘルプを表示</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">
+                      Esc
+                    </kbd>{" "}
+                    <span>ダイアログを閉じる</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <kbd className="bg-gray-100 border rounded px-1.5 py-0.5 text-xs font-mono">
+                      Ctrl+[
+                    </kbd>{" "}
+                    <span>ダイアログを閉じる</span>
+                  </div>
                 </div>
               </section>
             </div>
