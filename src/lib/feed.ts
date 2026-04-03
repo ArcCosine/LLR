@@ -33,6 +33,8 @@ export function parseArticlesFromXml(xmlText: string): Article[] {
     const pubDate =
       node.querySelector("pubDate")?.textContent ||
       node.querySelector("published")?.textContent ||
+      node.querySelector("updated")?.textContent ||
+      node.getElementsByTagName("dc:date")[0]?.textContent ||
       "";
 
     return { title, link, content, pubDate };

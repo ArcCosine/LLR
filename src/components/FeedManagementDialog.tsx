@@ -130,6 +130,24 @@ export function FeedManagementDialog({
 
   const handleSaveFeed = (feed: Subscription) => {
     if (isAdding) {
+      const existingIndex = localSubs.findIndex(
+        (sub) => sub.xmlUrl.toLowerCase() === feed.xmlUrl.toLowerCase(),
+      );
+
+      if (existingIndex !== -1) {
+        if (
+          confirm(
+            "既にこのフィードは登録済です。更新しますか？\n(現在の登録内容が新しいデータで上書きされます)",
+          )
+        ) {
+          const next = [...localSubs];
+          next[existingIndex] = feed;
+          setLocalSubs(next);
+          setIsAdding(false);
+        }
+        return;
+      }
+
       setLocalSubs([...localSubs, feed]);
       setIsAdding(false);
     } else if (editingIndex !== null) {
