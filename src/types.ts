@@ -3,6 +3,7 @@ export interface Subscription {
   htmlUrl: string;
   xmlUrl: string;
   unreadCount: number;
+  lastUpdated?: number; // Timestamp of the latest article
 }
 
 export interface Article {

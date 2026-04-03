@@ -3,8 +3,9 @@ import type { Article } from "@/types";
 const DB_NAME = "llr-reader-db";
 const RSS_CACHE_STORE_NAME = "rss-cache";
 const OPML_STORE_NAME = "opml-files";
+const SUBSCRIPTIONS_STORE_NAME = "subscriptions";
 const OPML_ENTRY_ID = "active-opml";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 export interface CacheEntry {
   xmlUrl: string;
@@ -17,6 +18,12 @@ export interface OpmlEntry {
   fileName: string;
   text: string;
   importedAt: number;
+}
+
+export interface SubscriptionEntry {
+  id: "active-subscriptions";
+  data: import("@/types").Subscription[];
+  updatedAt: number;
 }
 
 export function openDB(): Promise<IDBDatabase> {
@@ -33,6 +40,9 @@ export function openDB(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains(OPML_STORE_NAME)) {
         db.createObjectStore(OPML_STORE_NAME, { keyPath: "id" });
+      }
+      if (!db.objectStoreNames.contains(SUBSCRIPTIONS_STORE_NAME)) {
+        db.createObjectStore(SUBSCRIPTIONS_STORE_NAME, { keyPath: "id" });
       }
     };
   });
@@ -143,6 +153,52 @@ export async function replaceStoredOpml(
   });
 
   db.close();
+}
+
+export async function getSubscriptions(): Promise<
+  import("@/types").Subscription[] | null
+> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(SUBSCRIPTIONS_STORE_NAME, "readonly");
+    const store = transaction.objectStore(SUBSCRIPTIONS_STORE_NAME);
+    const request = store.get("active-subscriptions");
+
+    request.onerror = () => {
+      db.close();
+      reject(request.error);
+    };
+    request.onsuccess = () => {
+      db.close();
+      const entry = request.result as SubscriptionEntry | undefined;
+      resolve(entry ? entry.data : null);
+    };
+  });
+}
+
+export async function saveSubscriptions(
+  data: import("@/types").Subscription[],
+): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(SUBSCRIPTIONS_STORE_NAME, "readwrite");
+    const store = transaction.objectStore(SUBSCRIPTIONS_STORE_NAME);
+    const entry: SubscriptionEntry = {
+      id: "active-subscriptions",
+      data,
+      updatedAt: Date.now(),
+    };
+    const request = store.put(entry);
+
+    request.onerror = () => {
+      db.close();
+      reject(request.error);
+    };
+    request.onsuccess = () => {
+      db.close();
+      resolve();
+    };
+  });
 }
 
 function deleteDatabase(): Promise<void> {

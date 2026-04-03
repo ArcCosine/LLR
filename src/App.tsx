@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { ArticlePane } from "@/components/ArticlePane";
 import { ClearCacheDialog } from "@/components/ClearCacheDialog";
 import { FeedList } from "@/components/FeedList";
+import { FeedManagementDialog } from "@/components/FeedManagementDialog";
 import { HelpDialog } from "@/components/HelpDialog";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { OpmlImportPanel } from "@/components/OpmlImportPanel";
@@ -13,14 +14,17 @@ import {
   clearAllCache,
   getCache,
   getStoredOpml,
+  getSubscriptions,
   replaceStoredOpml,
+  saveSubscriptions,
   setCache,
 } from "@/lib/db";
 import {
-  buildRssRequestUrl,
-  parseSubscriptionsFromOpml,
-  parseArticlesFromXml,
   RSS_API_BASE_URL,
+  buildRssRequestUrl,
+  generateOpmlFromSubscriptions,
+  parseArticlesFromXml,
+  parseSubscriptionsFromOpml,
 } from "@/lib/feed";
 import type { Article, Subscription } from "@/types";
 
@@ -36,6 +40,7 @@ export default function App() {
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [showHelpDialog, setShowHelpDialog] = useState(false);
   const [showImportPanel, setShowImportPanel] = useState(false);
+  const [showManagementDialog, setShowManagementDialog] = useState(false);
   const [importBusy, setImportBusy] = useState(false);
   const [importError, setImportError] = useState("");
   const [fontSizeIndex, setFontSizeIndex] = useAtom(fontSizeAtom);
@@ -110,29 +115,41 @@ export default function App() {
   }, [selectedSubIndex, subscriptions]);
 
   useEffect(() => {
-    const loadStoredOpml = async () => {
+    const loadData = async () => {
       try {
-        const storedOpml = await getStoredOpml();
-
-        if (!storedOpml) {
-          setShowImportPanel(true);
-          return;
+        let subs: Subscription[] = [];
+        const storedSubs = await getSubscriptions();
+        if (storedSubs) {
+          subs = storedSubs;
+        } else {
+          const storedOpml = await getStoredOpml();
+          if (storedOpml) {
+            subs = parseSubscriptionsFromOpml(storedOpml.text);
+            await saveSubscriptions(subs);
+          }
         }
 
-        const subs = parseSubscriptionsFromOpml(storedOpml.text);
-        setSubscriptions(subs);
-        setSelectedSubIndex(subs.length > 0 ? 0 : -1);
-        setShowImportPanel(subs.length === 0);
+        if (subs.length > 0) {
+          // Sort once at startup
+          subs.sort((a, b) => (b.lastUpdated || 0) - (a.lastUpdated || 0));
+          setSubscriptions(subs);
+          setSelectedSubIndex(0);
+          setShowImportPanel(false);
+        } else {
+          setShowImportPanel(true);
+        }
       } catch (error) {
-        console.error("Failed to load OPML:", error);
+        console.error("Failed to load data:", error);
         setShowImportPanel(true);
-        setImportError("保存済みOPMLの読み込みに失敗しました。再度取り込んでください。");
+        setImportError(
+          "保存済みデータの読み込みに失敗しました。再度取り込んでください。",
+        );
       } finally {
         setLoading(false);
       }
     };
 
-    void loadStoredOpml();
+    void loadData();
   }, []);
 
   useEffect(() => {
@@ -142,11 +159,32 @@ export default function App() {
       setSelectedArticleIndex(-1);
       const subscription = subscriptions[selectedSubIndex];
 
+      const updateLastUpdated = async (articles: Article[]) => {
+        if (articles.length === 0) return;
+
+        // Find newest publication date
+        const timestamps = articles
+          .map((a) => Date.parse(a.pubDate))
+          .filter((t) => !isNaN(t));
+
+        if (timestamps.length === 0) return;
+        const newest = Math.max(...timestamps);
+
+        if (subscription.lastUpdated !== newest) {
+          // Update in place to preserve order during session
+          const nextSubs = [...subscriptions];
+          nextSubs[selectedSubIndex] = { ...subscription, lastUpdated: newest };
+          setSubscriptions(nextSubs);
+          await saveSubscriptions(nextSubs);
+        }
+      };
+
       try {
         const cached = await getCache(subscription.xmlUrl);
         if (cached && Date.now() - cached.timestamp < CACHE_EXPIRATION_MS) {
           setArticles(cached.articles);
           if (cached.articles.length > 0) setSelectedArticleIndex(0);
+          updateLastUpdated(cached.articles);
           return;
         }
       } catch (error) {
@@ -165,6 +203,7 @@ export default function App() {
         setArticles(parsedArticles);
         if (parsedArticles.length > 0) setSelectedArticleIndex(0);
         await setCache(subscription.xmlUrl, parsedArticles);
+        updateLastUpdated(parsedArticles);
       } catch (error) {
         console.error("Failed to fetch RSS:", error);
       }
@@ -240,10 +279,17 @@ export default function App() {
       if (event.key === "Escape" || (event.ctrlKey && event.key === "[")) {
         setShowClearDialog(false);
         setShowHelpDialog(false);
+        setShowManagementDialog(false);
         return;
       }
 
-      if (showClearDialog || showHelpDialog || showImportPanel) return;
+      if (
+        showClearDialog ||
+        showHelpDialog ||
+        showImportPanel ||
+        showManagementDialog
+      )
+        return;
 
       switch (event.key) {
         case "a":
@@ -287,6 +333,9 @@ export default function App() {
         case "?":
           setShowHelpDialog(true);
           break;
+        case "m":
+          setShowManagementDialog(true);
+          break;
         case "<":
           setFontSizeIndex((previousIndex) => Math.max(0, previousIndex - 1));
           break;
@@ -317,6 +366,7 @@ export default function App() {
     showClearDialog,
     showHelpDialog,
     showImportPanel,
+    showManagementDialog,
     selectedArticleIndex,
     setFontSizeIndex,
   ]);
@@ -347,6 +397,7 @@ export default function App() {
       }
 
       await replaceStoredOpml(file.name, xmlText);
+      await saveSubscriptions(nextSubscriptions);
       setSubscriptions(nextSubscriptions);
       setSelectedSubIndex(0);
       setArticles([]);
@@ -364,9 +415,47 @@ export default function App() {
     }
   };
 
+  const handleExport = () => {
+    if (subscriptions.length === 0) {
+      alert("エクスポートするフィードがありません。");
+      return;
+    }
+
+    const opmlContent = generateOpmlFromSubscriptions(subscriptions);
+    const blob = new Blob([opmlContent], { type: "text/xml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `llr-subscriptions-${
+      new Date().toISOString().split("T")[0]
+    }.opml`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleSaveAllSubscriptions = async (nextSubs: Subscription[]) => {
+    try {
+      // Re-sort when explicitly saving from management dialog
+      nextSubs.sort((a, b) => (b.lastUpdated || 0) - (a.lastUpdated || 0));
+      await saveSubscriptions(nextSubs);
+      setSubscriptions(nextSubs);
+      setSelectedSubIndex((prev) => Math.min(nextSubs.length - 1, prev));
+      setShowManagementDialog(false);
+    } catch (error) {
+      console.error("Failed to save subscriptions:", error);
+      alert("保存に失敗しました。");
+    }
+  };
+
   return (
     <div className="flex h-screen flex-col overflow-hidden">
-      <AppHeader onShowImport={() => setShowImportPanel(true)} />
+      <AppHeader
+        onShowImport={() => setShowImportPanel(true)}
+        onShowManagement={() => setShowManagementDialog(true)}
+        onExport={handleExport}
+      />
 
       <div className="relative min-h-0 flex-1">
         {!subscriptions.length && showImportPanel ? (
@@ -424,6 +513,14 @@ export default function App() {
 
       {showHelpDialog && (
         <HelpDialog onClose={() => setShowHelpDialog(false)} />
+      )}
+
+      {showManagementDialog && (
+        <FeedManagementDialog
+          subscriptions={subscriptions}
+          onSaveAll={handleSaveAllSubscriptions}
+          onClose={() => setShowManagementDialog(false)}
+        />
       )}
     </div>
   );

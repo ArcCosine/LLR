@@ -39,6 +39,79 @@ export function parseArticlesFromXml(xmlText: string): Article[] {
   });
 }
 
+export function parseMetadataFromXml(xmlText: string): {
+  title: string;
+  htmlUrl: string;
+} {
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+
+  // RSS 2.0
+  const channel = xmlDoc.querySelector("channel");
+  if (channel) {
+    return {
+      title: channel.querySelector("title")?.textContent || "No Title",
+      htmlUrl: channel.querySelector("link")?.textContent || "",
+    };
+  }
+
+  // Atom
+  const feed = xmlDoc.querySelector("feed");
+  if (feed) {
+    const title = feed.querySelector("title")?.textContent || "No Title";
+    const linkNode =
+      feed.querySelector('link[rel="alternate"]') || feed.querySelector("link");
+    const htmlUrl = linkNode?.getAttribute("href") || "";
+    return { title, htmlUrl };
+  }
+
+  return { title: "No Title", htmlUrl: "" };
+}
+
+export function generateOpmlFromSubscriptions(
+  subscriptions: Subscription[],
+): string {
+  const date = new Date().toUTCString();
+  const outlines = subscriptions
+    .map((sub) => {
+      const title = escapeXml(sub.title);
+      const xmlUrl = escapeXml(sub.xmlUrl);
+      const htmlUrl = escapeXml(sub.htmlUrl);
+      return `    <outline text="${title}" title="${title}" type="rss" xmlUrl="${xmlUrl}" htmlUrl="${htmlUrl}"/>`;
+    })
+    .join("\n");
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head>
+    <title>LLR Subscriptions Export</title>
+    <dateCreated>${date}</dateCreated>
+  </head>
+  <body>
+${outlines}
+  </body>
+</opml>`;
+}
+
+function escapeXml(unsafe: string): string {
+  return unsafe.replace(/[<>&"']/g, (c) => {
+    switch (c) {
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case "&":
+        return "&amp;";
+      case '"':
+        return "&quot;";
+      case "'":
+        return "&apos;";
+      default:
+        return c;
+    }
+  });
+}
+
 export function parseSubscriptionsFromOpml(xmlText: string): Subscription[] {
   const parser = new DOMParser();
   const xmlDoc = parser.parseFromString(xmlText, "text/xml");
