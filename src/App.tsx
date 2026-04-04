@@ -397,7 +397,17 @@ export default function App() {
           break;
         case "o":
           if (selectedArticleIndex >= 0 && articles[selectedArticleIndex]) {
-            window.open(articles[selectedArticleIndex].link, "_blank");
+            const link = articles[selectedArticleIndex].link;
+            const a = document.createElement("a");
+            a.href = link;
+            a.target = "_blank";
+            a.rel = "noreferrer";
+            // Ctrl+Click (or Cmd+Click on Mac) typically opens in a background tab
+            const clickEvent = new MouseEvent("click", {
+              ctrlKey: true,
+              metaKey: true,
+            });
+            a.dispatchEvent(clickEvent);
           }
           break;
         case "c":
