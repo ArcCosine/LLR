@@ -24,9 +24,15 @@ export function parseArticlesFromXml(xmlText: string): Article[] {
       node.querySelector("link")?.textContent ||
       node.querySelector("link")?.getAttribute("href") ||
       "";
+    const contentEncoded =
+      node.getElementsByTagName("content:encoded")[0]?.textContent || "";
+    const dcContent = node.getElementsByTagName("dc:content")[0]?.textContent || "";
+    const description = node.querySelector("description")?.textContent || "";
+    const preferredBody =
+      dcContent.length > description.length ? dcContent : description;
     const content =
-      node.getElementsByTagName("content:encoded")[0]?.textContent ||
-      node.querySelector("description")?.textContent ||
+      contentEncoded ||
+      preferredBody ||
       node.querySelector("content")?.textContent ||
       node.querySelector("summary")?.textContent ||
       "";

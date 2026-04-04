@@ -42,9 +42,9 @@ export function ArticlePane({
                 ref={(node) => {
                   articleRefs.current[index] = node;
                 }}
-                className={`pb-10 ${
-                  index === selectedArticleIndex ? "scroll-mt-0" : ""
-                } ${index < articles.length - 1 ? "mb-10 border-b border-gray-200" : ""}`}
+                className={`scroll-mt-8 pb-10 ${
+                  index < articles.length - 1 ? "mb-10 border-b border-gray-200" : ""
+                }`}
                 data-selected={index === selectedArticleIndex}
               >
                 <header className="mb-8 border-b border-gray-100 pb-4">
@@ -77,7 +77,7 @@ export function ArticlePane({
                   </div>
                 </header>
                 <div
-                  className={`prose max-w-none ${FONT_SIZES[fontSizeIndex]}`}
+                  className={`prose max-w-none break-words ${FONT_SIZES[fontSizeIndex]}`}
                 >
                   <ArticleContent content={article.content} />
                 </div>

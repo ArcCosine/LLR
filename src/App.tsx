@@ -30,6 +30,7 @@ import type { Article, Subscription } from "@/types";
 
 const CACHE_EXPIRATION_MS = 1000 * 60 * 30;
 const PAGE_SCROLL_RATIO = 0.9;
+const INITIAL_STARTUP_REFRESH_COUNT = 30;
 
 export default function App() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -49,6 +50,8 @@ export default function App() {
   const contentAreaRef = useRef<HTMLElement>(null);
   const articleRefs = useRef<(HTMLElement | null)[]>([]);
   const pendingKeyboardArticleNavRef = useRef(false);
+  const activeFeedRequestIdRef = useRef(0);
+  const hasRunInitialTopFeedsRefreshRef = useRef(false);
 
   useEffect(() => {
     document.title = "LLR Reader";
@@ -115,6 +118,54 @@ export default function App() {
   }, [selectedSubIndex, subscriptions]);
 
   useEffect(() => {
+    if (subscriptions.length === 0 || hasRunInitialTopFeedsRefreshRef.current) {
+      return;
+    }
+
+    hasRunInitialTopFeedsRefreshRef.current = true;
+    const topSubscriptions = subscriptions.slice(0, INITIAL_STARTUP_REFRESH_COUNT);
+    let cancelled = false;
+
+    const refreshTopFeeds = async () => {
+      for (const [index, subscription] of topSubscriptions.entries()) {
+        if (cancelled) return;
+
+        try {
+          const response = await fetch(buildRssRequestUrl(subscription.xmlUrl));
+          if (!response.ok) {
+            throw new Error(`RSS fetch failed: ${response.status}`);
+          }
+
+          const parsedArticles = parseArticlesFromXml(await response.text());
+          if (cancelled) return;
+
+          await setCache(subscription.xmlUrl, parsedArticles);
+          if (cancelled) return;
+
+          if (
+            selectedSubIndex === index &&
+            subscriptions[index]?.xmlUrl === subscription.xmlUrl
+          ) {
+            articleRefs.current = [];
+            setArticles(parsedArticles);
+            setSelectedArticleIndex(parsedArticles.length > 0 ? 0 : -1);
+          }
+        } catch (error) {
+          if (!cancelled) {
+            console.warn("Initial top feed refresh failed:", error);
+          }
+        }
+      }
+    };
+
+    void refreshTopFeeds();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedSubIndex, subscriptions]);
+
+  useEffect(() => {
     const loadData = async () => {
       try {
         let subs: Subscription[] = [];
@@ -155,12 +206,23 @@ export default function App() {
   useEffect(() => {
     if (selectedSubIndex < 0 || !subscriptions[selectedSubIndex]) return;
 
+    const requestId = activeFeedRequestIdRef.current + 1;
+    activeFeedRequestIdRef.current = requestId;
+    const subscription = subscriptions[selectedSubIndex];
+    let cancelled = false;
+
     const fetchRSS = async () => {
+      const isStale = () =>
+        cancelled || activeFeedRequestIdRef.current !== requestId;
+
+      pendingKeyboardArticleNavRef.current = false;
       setSelectedArticleIndex(-1);
-      const subscription = subscriptions[selectedSubIndex];
+      articleRefs.current = [];
+      setArticles([]);
+      contentAreaRef.current?.scrollTo({ top: 0, behavior: "auto" });
 
       const updateLastUpdated = async (articles: Article[]) => {
-        if (articles.length === 0) return;
+        if (isStale() || articles.length === 0) return;
 
         // Find newest publication date
         const timestamps = articles
@@ -169,6 +231,8 @@ export default function App() {
 
         if (timestamps.length === 0) return;
         const newest = Math.max(...timestamps);
+
+        if (isStale()) return;
 
         if (subscription.lastUpdated !== newest) {
           // Update in place to preserve order during session
@@ -181,10 +245,11 @@ export default function App() {
 
       try {
         const cached = await getCache(subscription.xmlUrl);
+        if (isStale()) return;
         if (cached && Date.now() - cached.timestamp < CACHE_EXPIRATION_MS) {
           setArticles(cached.articles);
           if (cached.articles.length > 0) setSelectedArticleIndex(0);
-          updateLastUpdated(cached.articles);
+          void updateLastUpdated(cached.articles);
           return;
         }
       } catch (error) {
@@ -195,21 +260,29 @@ export default function App() {
 
       try {
         const response = await fetch(buildRssRequestUrl(subscription.xmlUrl));
+        if (isStale()) return;
         if (!response.ok) {
           throw new Error(`RSS fetch failed: ${response.status}`);
         }
 
         const parsedArticles = parseArticlesFromXml(await response.text());
+        if (isStale()) return;
         setArticles(parsedArticles);
         if (parsedArticles.length > 0) setSelectedArticleIndex(0);
         await setCache(subscription.xmlUrl, parsedArticles);
-        updateLastUpdated(parsedArticles);
+        void updateLastUpdated(parsedArticles);
       } catch (error) {
-        console.error("Failed to fetch RSS:", error);
+        if (!isStale()) {
+          console.error("Failed to fetch RSS:", error);
+        }
       }
     };
 
     void fetchRSS();
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedSubIndex, subscriptions]);
 
   useEffect(() => {

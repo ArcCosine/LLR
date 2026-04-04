@@ -31,19 +31,28 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
   switch (tag) {
     case "h1":
       return (
-        <h1 key={key} className="mb-4 mt-8 text-3xl font-bold">
+        <h1
+          key={key}
+          className="mb-4 mt-8 max-w-full [overflow-wrap:anywhere] text-3xl font-bold"
+        >
           {children}
         </h1>
       );
     case "h2":
       return (
-        <h2 key={key} className="mb-4 mt-8 text-2xl font-bold">
+        <h2
+          key={key}
+          className="mb-4 mt-8 max-w-full [overflow-wrap:anywhere] text-2xl font-bold"
+        >
           {children}
         </h2>
       );
     case "h3":
       return (
-        <h3 key={key} className="mb-3 mt-6 text-xl font-bold">
+        <h3
+          key={key}
+          className="mb-3 mt-6 max-w-full [overflow-wrap:anywhere] text-xl font-bold"
+        >
           {children}
         </h3>
       );
@@ -51,13 +60,16 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
     case "h5":
     case "h6":
       return (
-        <h4 key={key} className="mb-3 mt-6 text-lg font-semibold">
+        <h4
+          key={key}
+          className="mb-3 mt-6 max-w-full [overflow-wrap:anywhere] text-lg font-semibold"
+        >
           {children}
         </h4>
       );
     case "p":
       return (
-        <p key={key} className="mb-4 leading-7">
+        <p key={key} className="mb-4 max-w-full [overflow-wrap:anywhere] leading-7">
           {children}
         </p>
       );
@@ -77,19 +89,19 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
     }
     case "ul":
       return (
-        <ul key={key} className="mb-4 list-disc pl-6">
+        <ul key={key} className="mb-4 max-w-full list-disc pl-6 [overflow-wrap:anywhere]">
           {children}
         </ul>
       );
     case "ol":
       return (
-        <ol key={key} className="mb-4 list-decimal pl-6">
+        <ol key={key} className="mb-4 max-w-full list-decimal pl-6 [overflow-wrap:anywhere]">
           {children}
         </ol>
       );
     case "li":
       return (
-        <li key={key} className="mb-1">
+        <li key={key} className="mb-1 max-w-full [overflow-wrap:anywhere]">
           {children}
         </li>
       );
@@ -97,7 +109,7 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
       return (
         <blockquote
           key={key}
-          className="my-4 border-l-4 border-gray-300 pl-4 text-gray-700"
+          className="my-4 max-w-full border-l-4 border-gray-300 pl-4 text-gray-700 [overflow-wrap:anywhere]"
         >
           {children}
         </blockquote>
@@ -106,7 +118,7 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
       return (
         <pre
           key={key}
-          className="mb-4 overflow-x-auto rounded bg-gray-100 p-4 text-sm"
+          className="mb-4 max-w-full overflow-x-hidden whitespace-pre-wrap rounded bg-gray-100 p-4 text-sm break-words"
         >
           {children}
         </pre>
@@ -115,7 +127,7 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
       return (
         <code
           key={key}
-          className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.9em]"
+          className="max-w-full rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.9em] break-words [overflow-wrap:anywhere]"
         >
           {children}
         </code>
@@ -139,13 +151,16 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
       return <em key={key}>{children}</em>;
     case "figure":
       return (
-        <figure key={key} className="my-6">
+        <figure key={key} className="my-6 max-w-full overflow-hidden">
           {children}
         </figure>
       );
     case "figcaption":
       return (
-        <figcaption key={key} className="mt-2 text-sm text-gray-500">
+        <figcaption
+          key={key}
+          className="mt-2 max-w-full text-sm text-gray-500 [overflow-wrap:anywhere]"
+        >
           {children}
         </figcaption>
       );
@@ -153,7 +168,11 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
     case "span":
     case "section":
     case "article":
-      return <div key={key}>{children}</div>;
+      return (
+        <div key={key} className="min-w-0 max-w-full [overflow-wrap:anywhere]">
+          {children}
+        </div>
+      );
     default:
       return <>{children}</>;
   }
