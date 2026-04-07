@@ -85,7 +85,7 @@ export function generateOpmlFromSubscriptions(
       const title = escapeXml(sub.title);
       const xmlUrl = escapeXml(sub.xmlUrl);
       const htmlUrl = escapeXml(sub.htmlUrl);
-      return `    <outline text="${title}" title="${title}" type="rss" xmlUrl="${xmlUrl}" htmlUrl="${htmlUrl}"/>`;
+      return `<outline text="${title}" title="${title}" type="rss" xmlUrl="${xmlUrl}" htmlUrl="${htmlUrl}"/>`;
     })
     .join("\n");
 
