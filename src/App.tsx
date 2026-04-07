@@ -52,10 +52,16 @@ export default function App() {
   const pendingKeyboardArticleNavRef = useRef(false);
   const activeFeedRequestIdRef = useRef(0);
   const hasRunInitialTopFeedsRefreshRef = useRef(false);
+  const selectedSubIndexRef = useRef(selectedSubIndex);
+  const subscriptionsRef = useRef(subscriptions);
 
   useEffect(() => {
-    document.title = "LLR Reader";
-  }, []);
+    selectedSubIndexRef.current = selectedSubIndex;
+  }, [selectedSubIndex]);
+
+  useEffect(() => {
+    subscriptionsRef.current = subscriptions;
+  }, [subscriptions]);
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
@@ -123,10 +129,15 @@ export default function App() {
     }
 
     hasRunInitialTopFeedsRefreshRef.current = true;
-    const topSubscriptions = subscriptions.slice(0, INITIAL_STARTUP_REFRESH_COUNT);
+    const topSubscriptions = subscriptions.slice(
+      0,
+      INITIAL_STARTUP_REFRESH_COUNT,
+    );
     let cancelled = false;
 
     const refreshTopFeeds = async () => {
+      const updates = new Map<string, number>();
+
       for (const [index, subscription] of topSubscriptions.entries()) {
         if (cancelled) return;
 
@@ -142,9 +153,20 @@ export default function App() {
           await setCache(subscription.xmlUrl, parsedArticles);
           if (cancelled) return;
 
+          const timestamps = parsedArticles
+            .map((a) => Date.parse(a.pubDate))
+            .filter((t) => !isNaN(t));
+
+          if (timestamps.length > 0) {
+            const newest = Math.max(...timestamps);
+            if (subscription.lastUpdated !== newest) {
+              updates.set(subscription.xmlUrl, newest);
+            }
+          }
+
           if (
-            selectedSubIndex === index &&
-            subscriptions[index]?.xmlUrl === subscription.xmlUrl
+            subscriptionsRef.current[selectedSubIndexRef.current]?.xmlUrl ===
+            subscription.xmlUrl
           ) {
             articleRefs.current = [];
             setArticles(parsedArticles);
@@ -156,6 +178,34 @@ export default function App() {
           }
         }
       }
+
+      if (updates.size > 0 && !cancelled) {
+        setSubscriptions((prevSubs) => {
+          const currentSelectedXmlUrl =
+            prevSubs[selectedSubIndexRef.current]?.xmlUrl;
+
+          const nextSubs = prevSubs.map((s) => {
+            const updatedLastUpdated = updates.get(s.xmlUrl);
+            return updatedLastUpdated !== undefined
+              ? { ...s, lastUpdated: updatedLastUpdated }
+              : s;
+          });
+
+          nextSubs.sort((a, b) => (b.lastUpdated || 0) - (a.lastUpdated || 0));
+
+          if (currentSelectedXmlUrl) {
+            const newIndex = nextSubs.findIndex(
+              (s) => s.xmlUrl === currentSelectedXmlUrl,
+            );
+            if (newIndex !== -1 && newIndex !== selectedSubIndexRef.current) {
+              setTimeout(() => setSelectedSubIndex(newIndex), 0);
+            }
+          }
+
+          void saveSubscriptions(nextSubs);
+          return nextSubs;
+        });
+      }
     };
 
     void refreshTopFeeds();
@@ -163,7 +213,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [selectedSubIndex, subscriptions]);
+  }, [subscriptions.length > 0]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -235,11 +285,30 @@ export default function App() {
         if (isStale()) return;
 
         if (subscription.lastUpdated !== newest) {
-          // Update in place to preserve order during session
-          const nextSubs = [...subscriptions];
-          nextSubs[selectedSubIndex] = { ...subscription, lastUpdated: newest };
-          setSubscriptions(nextSubs);
-          await saveSubscriptions(nextSubs);
+          setSubscriptions((prevSubs) => {
+            const currentSelectedXmlUrl =
+              prevSubs[selectedSubIndexRef.current]?.xmlUrl;
+
+            const nextSubs = prevSubs.map((s) =>
+              s.xmlUrl === subscription.xmlUrl
+                ? { ...s, lastUpdated: newest }
+                : s,
+            );
+
+            nextSubs.sort((a, b) => (b.lastUpdated || 0) - (a.lastUpdated || 0));
+
+            if (currentSelectedXmlUrl) {
+              const newIndex = nextSubs.findIndex(
+                (s) => s.xmlUrl === currentSelectedXmlUrl,
+              );
+              if (newIndex !== -1 && newIndex !== selectedSubIndexRef.current) {
+                setTimeout(() => setSelectedSubIndex(newIndex), 0);
+              }
+            }
+
+            void saveSubscriptions(nextSubs);
+            return nextSubs;
+          });
         }
       };
 
