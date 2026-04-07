@@ -32,7 +32,7 @@ async function prefetchUrls(urls, apiBaseUrl) {
         console.log(`[SW] Prefetched: ${url}`);
       }
     } catch (error) {
-      console.error(`[SW] Prefetch failed for ${url}:`, error);
+      console.error("[SW] Prefetch failed for %s:", url, error);
     }
   }
 }

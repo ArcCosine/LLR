@@ -69,7 +69,7 @@ async function fetchLatestDate(url: string): Promise<Date | null> {
 
     return latest;
   } catch (_e) {
-    // console.warn(`Failed to fetch/parse ${url}:`, e);
+    // console.warn("Failed to fetch/parse %s:", url, _e);
     return null;
   }
 }
