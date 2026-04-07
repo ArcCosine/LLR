@@ -620,7 +620,7 @@ export default function App() {
           />
         ) : (
           <div
-            className={`flex h-full min-h-0 overflow-hidden bg-white text-gray-800 ${FONT_SIZES[fontSizeIndex]}`}
+            className={`flex h-full min-h-0 overflow-hidden bg-white text-gray-800 leading-relaxed ${FONT_SIZES[fontSizeIndex]}`}
           >
             <FeedList
               subscriptions={subscriptions}

@@ -49,7 +49,7 @@ export function ArticlePane({
               >
                 <header className="mb-8 border-b border-gray-100 pb-4">
                   <h2
-                    className={`mb-3 rounded-md px-4 py-3 text-2xl font-bold ${
+                    className={`mb-3 rounded-md px-4 py-3 text-[1.5em] font-bold leading-tight ${
                       index === selectedArticleIndex
                         ? "bg-sky-100 text-sky-950"
                         : "bg-slate-100 text-slate-900"
@@ -64,7 +64,7 @@ export function ArticlePane({
                       {article.title}
                     </a>
                   </h2>
-                  <div className="flex justify-between gap-4 text-sm text-gray-500 max-md:flex-col">
+                  <div className="flex justify-between gap-4 text-[0.875em] text-gray-500 max-md:flex-col">
                     <span>{formatPubDate(article.pubDate)}</span>
                     <a
                       href={article.link}
@@ -77,7 +77,7 @@ export function ArticlePane({
                   </div>
                 </header>
                 <div
-                  className={`prose max-w-none break-words ${FONT_SIZES[fontSizeIndex]}`}
+                  className={`prose max-w-none break-words leading-relaxed ${FONT_SIZES[fontSizeIndex]}`}
                 >
                   <ArticleContent content={article.content} />
                 </div>

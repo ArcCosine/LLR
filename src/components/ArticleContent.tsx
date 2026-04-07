@@ -33,7 +33,7 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
       return (
         <h1
           key={key}
-          className="mb-4 mt-8 max-w-full [overflow-wrap:anywhere] text-3xl font-bold"
+          className="mb-4 mt-8 max-w-full [overflow-wrap:anywhere] text-[1.8em] font-bold leading-tight"
         >
           {children}
         </h1>
@@ -42,7 +42,7 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
       return (
         <h2
           key={key}
-          className="mb-4 mt-8 max-w-full [overflow-wrap:anywhere] text-2xl font-bold"
+          className="mb-4 mt-8 max-w-full [overflow-wrap:anywhere] text-[1.5em] font-bold leading-tight"
         >
           {children}
         </h2>
@@ -51,7 +51,7 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
       return (
         <h3
           key={key}
-          className="mb-3 mt-6 max-w-full [overflow-wrap:anywhere] text-xl font-bold"
+          className="mb-3 mt-6 max-w-full [overflow-wrap:anywhere] text-[1.25em] font-bold leading-snug"
         >
           {children}
         </h3>
@@ -62,14 +62,14 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
       return (
         <h4
           key={key}
-          className="mb-3 mt-6 max-w-full [overflow-wrap:anywhere] text-lg font-semibold"
+          className="mb-3 mt-6 max-w-full [overflow-wrap:anywhere] text-[1.125em] font-semibold leading-snug"
         >
           {children}
         </h4>
       );
     case "p":
       return (
-        <p key={key} className="mb-4 max-w-full [overflow-wrap:anywhere] leading-7">
+        <p key={key} className="mb-4 max-w-full [overflow-wrap:anywhere] leading-relaxed">
           {children}
         </p>
       );
@@ -118,7 +118,7 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
       return (
         <pre
           key={key}
-          className="mb-4 max-w-full overflow-x-hidden whitespace-pre-wrap rounded bg-gray-100 p-4 text-sm break-words"
+          className="mb-4 max-w-full overflow-x-hidden whitespace-pre-wrap rounded bg-gray-100 p-4 text-[0.875em] break-words"
         >
           {children}
         </pre>
@@ -159,7 +159,7 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
       return (
         <figcaption
           key={key}
-          className="mt-2 max-w-full text-sm text-gray-500 [overflow-wrap:anywhere]"
+          className="mt-2 max-w-full text-[0.875em] text-gray-500 [overflow-wrap:anywhere]"
         >
           {children}
         </figcaption>
