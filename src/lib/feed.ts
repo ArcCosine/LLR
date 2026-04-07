@@ -120,9 +120,53 @@ function escapeXml(unsafe: string): string {
   });
 }
 
+function validateOpmlInput(xmlText: string): string {
+  // Normalize to string and trim whitespace/BOM to reduce parser quirks.
+  let normalized = String(xmlText);
+  // Remove UTF-8 BOM if present
+  if (normalized.charCodeAt(0) === 0xfeff) {
+    normalized = normalized.slice(1);
+  }
+  normalized = normalized.trim();
+
+  // Reject unreasonably large inputs (basic DoS/XEE hardening).
+  const MAX_OPML_SIZE = 2 * 1024 * 1024; // 2MB
+  if (normalized.length === 0 || normalized.length > MAX_OPML_SIZE) {
+    throw new Error("無効なOPMLファイルです。");
+  }
+
+  // Basic shape check: must look like XML/OPML.
+  if (!normalized.startsWith("<") || !/<opml[\s>]/i.test(normalized)) {
+    throw new Error("OPMLファイルではない可能性があります。");
+  }
+
+  // Optionally reject obviously dangerous HTML constructs.
+  const dangerousPattern =
+    /<(script|iframe|object|embed|meta|link|style)\b[^>]*>/i;
+  if (dangerousPattern.test(normalized)) {
+    throw new Error("危険な要素を含むため、OPMLを読み込めません。");
+  }
+
+  // Reject generic HTML markup and inline handlers to avoid the text being
+  // interpreted as HTML in any downstream usage.
+  const htmlLikePattern =
+    /<(div|span|p|a|img|form|input|button|textarea|select|option|video|audio|canvas)\b[^>]*>/i;
+  const inlineHandlerOrJsUrlPattern =
+    /\bon\w+\s*=\s*["'][^"']*["']|javascript:/i;
+  if (
+    htmlLikePattern.test(normalized) ||
+    inlineHandlerOrJsUrlPattern.test(normalized)
+  ) {
+    throw new Error("危険な要素を含むため、OPMLを読み込めません。");
+  }
+
+  return normalized;
+}
+
 export function parseSubscriptionsFromOpml(xmlText: string): Subscription[] {
+  const safeXmlText = validateOpmlInput(xmlText);
   const parser = new DOMParser();
-  const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+  const xmlDoc = parser.parseFromString(safeXmlText, "text/xml");
   const parserError = xmlDoc.querySelector("parsererror");
 
   if (parserError) {
@@ -132,7 +176,9 @@ export function parseSubscriptionsFromOpml(xmlText: string): Subscription[] {
   return Array.from(xmlDoc.querySelectorAll("outline[xmlUrl]"))
     .map((node) => ({
       title:
-        node.getAttribute("title") || node.getAttribute("text") || "No Title",
+        node.getAttribute("title") ||
+        node.getAttribute("text") ||
+        "No Title",
       xmlUrl: node.getAttribute("xmlUrl") || "",
       htmlUrl: node.getAttribute("htmlUrl") || "",
       unreadCount: 0,
