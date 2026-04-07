@@ -1,4 +1,5 @@
 import type { Article, Subscription } from "@/types";
+import { XMLParser } from "fast-xml-parser";
 
 export const RSS_API_BASE_URL =
   import.meta.env.VITE_RSS_API_BASE_URL ||
@@ -165,23 +166,82 @@ function validateOpmlInput(xmlText: string): string {
 
 export function parseSubscriptionsFromOpml(xmlText: string): Subscription[] {
   const safeXmlText = validateOpmlInput(xmlText);
-  const parser = new DOMParser();
-  const xmlDoc = parser.parseFromString(safeXmlText, "text/xml");
-  const parserError = xmlDoc.querySelector("parsererror");
 
-  if (parserError) {
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: "@_",
+    allowBooleanAttributes: true,
+    parseAttributeValue: false,
+    trimValues: true,
+  });
+
+  let opmlObj: unknown;
+  try {
+    opmlObj = parser.parse(safeXmlText);
+  } catch {
     throw new Error("OPMLの解析に失敗しました。");
   }
 
-  return Array.from(xmlDoc.querySelectorAll("outline[xmlUrl]"))
-    .map((node) => ({
-      title:
-        node.getAttribute("title") ||
-        node.getAttribute("text") ||
-        "No Title",
-      xmlUrl: node.getAttribute("xmlUrl") || "",
-      htmlUrl: node.getAttribute("htmlUrl") || "",
-      unreadCount: 0,
-    }))
+  // Expect a structure like { opml: { body: { outline: [...] } } }, but
+  // be defensive about possible nesting shapes.
+  const outlines: any[] = [];
+
+  const collectOutlines = (node: any): void => {
+    if (!node || typeof node !== "object") {
+      return;
+    }
+
+    if (Array.isArray(node)) {
+      for (const child of node) {
+        collectOutlines(child);
+      }
+      return;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(node, "outline")) {
+      const o = (node as any).outline;
+      if (Array.isArray(o)) {
+        for (const child of o) {
+          outlines.push(child);
+          collectOutlines(child);
+        }
+      } else if (o && typeof o === "object") {
+        outlines.push(o);
+        collectOutlines(o);
+      }
+    }
+
+    for (const key of Object.keys(node)) {
+      if (key === "outline") continue;
+      collectOutlines((node as any)[key]);
+    }
+  };
+
+  if (
+    opmlObj &&
+    typeof opmlObj === "object" &&
+    (opmlObj as any).opml
+  ) {
+    collectOutlines((opmlObj as any).opml);
+  } else {
+    throw new Error("OPMLの解析に失敗しました。");
+  }
+
+  return outlines
+    .map((node) => {
+      const titleAttr = (node as any)["@_title"] as string | undefined;
+      const textAttr = (node as any)["@_text"] as string | undefined;
+      const xmlUrlAttr = (node as any)["@_xmlUrl"] as string | undefined;
+      const htmlUrlAttr = (node as any)["@_htmlUrl"] as string | undefined;
+
+      const xmlUrl = xmlUrlAttr ? String(xmlUrlAttr).trim() : "";
+
+      return {
+        title: (titleAttr || textAttr || "No Title") as string,
+        xmlUrl,
+        htmlUrl: htmlUrlAttr ? String(htmlUrlAttr) : "",
+        unreadCount: 0,
+      } satisfies Subscription;
+    })
     .filter((subscription) => subscription.xmlUrl.length > 0);
 }
