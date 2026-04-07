@@ -147,6 +147,19 @@ function validateOpmlInput(xmlText: string): string {
     throw new Error("危険な要素を含むため、OPMLを読み込めません。");
   }
 
+  // Reject generic HTML markup and inline handlers to avoid the text being
+  // interpreted as HTML in any downstream usage.
+  const htmlLikePattern =
+    /<(div|span|p|a|img|form|input|button|textarea|select|option|video|audio|canvas)\b[^>]*>/i;
+  const inlineHandlerOrJsUrlPattern =
+    /\bon\w+\s*=\s*["'][^"']*["']|javascript:/i;
+  if (
+    htmlLikePattern.test(normalized) ||
+    inlineHandlerOrJsUrlPattern.test(normalized)
+  ) {
+    throw new Error("危険な要素を含むため、OPMLを読み込めません。");
+  }
+
   return normalized;
 }
 
