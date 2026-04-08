@@ -4,6 +4,7 @@ import {
   ChevronUp,
   PanelLeftClose,
   PanelLeftOpen,
+  RotateCcw,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AppFooter } from "@/components/AppFooter";
@@ -635,6 +636,14 @@ export default function App() {
 
             {/* Feed Navigation Buttons - Positioned on the bottom-right edge of the article area */}
             <div className="absolute right-4 bottom-4 z-20 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => setShowClearDialog(true)}
+                title="Clear Cache"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-lg border border-gray-200 transition-all hover:bg-red-50 active:scale-95 opacity-80 hover:opacity-100"
+              >
+                <RotateCcw size={20} className="text-gray-600" />
+              </button>
               <button
                 type="button"
                 onClick={() =>
