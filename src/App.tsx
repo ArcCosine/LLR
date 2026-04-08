@@ -1,4 +1,10 @@
 import { useAtom } from "jotai";
+import {
+  ChevronDown,
+  ChevronUp,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AppFooter } from "@/components/AppFooter";
 import { AppHeader } from "@/components/AppHeader";
@@ -45,6 +51,7 @@ export default function App() {
   const [importBusy, setImportBusy] = useState(false);
   const [importError, setImportError] = useState("");
   const [fontSizeIndex, setFontSizeIndex] = useAtom(fontSizeAtom);
+  const [showFeedList, setShowFeedList] = useState(true);
 
   const subListRef = useRef<HTMLDivElement>(null);
   const contentAreaRef = useRef<HTMLElement>(null);
@@ -286,25 +293,11 @@ export default function App() {
 
         if (subscription.lastUpdated !== newest) {
           setSubscriptions((prevSubs) => {
-            const currentSelectedXmlUrl =
-              prevSubs[selectedSubIndexRef.current]?.xmlUrl;
-
             const nextSubs = prevSubs.map((s) =>
               s.xmlUrl === subscription.xmlUrl
                 ? { ...s, lastUpdated: newest }
                 : s,
             );
-
-            nextSubs.sort((a, b) => (b.lastUpdated || 0) - (a.lastUpdated || 0));
-
-            if (currentSelectedXmlUrl) {
-              const newIndex = nextSubs.findIndex(
-                (s) => s.xmlUrl === currentSelectedXmlUrl,
-              );
-              if (newIndex !== -1 && newIndex !== selectedSubIndexRef.current) {
-                setTimeout(() => setSelectedSubIndex(newIndex), 0);
-              }
-            }
 
             void saveSubscriptions(nextSubs);
             return nextSubs;
@@ -488,6 +481,9 @@ export default function App() {
         case "m":
           setShowManagementDialog(true);
           break;
+        case "f":
+          setShowFeedList((prev) => !prev);
+          break;
         case "<":
           setFontSizeIndex((previousIndex) => Math.max(0, previousIndex - 1));
           break;
@@ -589,8 +585,6 @@ export default function App() {
 
   const handleSaveAllSubscriptions = async (nextSubs: Subscription[]) => {
     try {
-      // Re-sort when explicitly saving from management dialog
-      nextSubs.sort((a, b) => (b.lastUpdated || 0) - (a.lastUpdated || 0));
       await saveSubscriptions(nextSubs);
       setSubscriptions(nextSubs);
       setSelectedSubIndex((prev) => Math.min(nextSubs.length - 1, prev));
@@ -627,6 +621,8 @@ export default function App() {
               selectedSubIndex={selectedSubIndex}
               onSelectSubscription={setSelectedSubIndex}
               subListRef={subListRef}
+              showFeedList={showFeedList}
+              onToggleFeedList={() => setShowFeedList((prev) => !prev)}
             />
             <ArticlePane
               articles={articles}
@@ -636,6 +632,60 @@ export default function App() {
               selectedArticleIndex={selectedArticleIndex}
               selectedSubscription={subscriptions[selectedSubIndex]}
             />
+
+            {/* Feed Navigation Buttons - Positioned on the bottom-right edge of the article area */}
+            <div className="absolute right-4 bottom-4 z-20 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedSubIndex((prev) => Math.max(0, prev - 1))
+                }
+                disabled={selectedSubIndex <= 0}
+                title="Previous Feed (a)"
+                className={`flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-lg border border-gray-200 transition-all hover:bg-gray-50 active:scale-95 ${
+                  selectedSubIndex <= 0
+                    ? "opacity-30 pointer-events-none"
+                    : "opacity-80 hover:opacity-100"
+                }`}
+              >
+                <ChevronUp size={24} className="text-gray-600" />
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedSubIndex((prev) =>
+                    Math.min(subscriptions.length - 1, prev + 1),
+                  )
+                }
+                disabled={selectedSubIndex >= subscriptions.length - 1}
+                title="Next Feed (s)"
+                className={`flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-lg border border-gray-200 transition-all hover:bg-gray-50 active:scale-95 ${
+                  selectedSubIndex >= subscriptions.length - 1
+                    ? "opacity-30 pointer-events-none"
+                    : "opacity-80 hover:opacity-100"
+                }`}
+              >
+                <ChevronDown size={24} className="text-gray-600" />
+              </button>
+            </div>
+
+            {/* Unified Toggle Button - Straddles the boundary when Feeds is open, moves to bottom-left when closed */}
+            <button
+              type="button"
+              onClick={() => setShowFeedList((prev) => !prev)}
+              title={showFeedList ? "Hide sidebar (f)" : "Show sidebar (f)"}
+              className={`absolute bottom-4 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-lg border border-gray-300 hover:bg-gray-50 transition-all duration-300 ease-in-out ${
+                showFeedList
+                  ? "left-64 max-md:left-52 -translate-x-1/2"
+                  : "left-4"
+              }`}
+            >
+              {showFeedList ? (
+                <PanelLeftClose size={18} className="text-gray-600" />
+              ) : (
+                <PanelLeftOpen size={18} className="text-gray-600" />
+              )}
+            </button>
           </div>
         )}
 
