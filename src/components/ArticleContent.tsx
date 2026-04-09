@@ -81,7 +81,7 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
           href={href}
           target={href?.startsWith("http") ? "_blank" : undefined}
           rel={href?.startsWith("http") ? "noopener noreferrer" : undefined}
-          className="text-blue-600 underline"
+          className="text-blue-600 underline inline-block"
         >
           {children}
         </a>
@@ -109,7 +109,7 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
       return (
         <blockquote
           key={key}
-          className="my-4 max-w-full border-l-4 border-gray-300 pl-4 text-gray-700 [overflow-wrap:anywhere]"
+          className="my-6 max-w-full border-l-4 border-slate-300 bg-slate-50 py-2 pl-4 pr-4 text-gray-700 italic [overflow-wrap:anywhere]"
         >
           {children}
         </blockquote>
@@ -118,7 +118,7 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
       return (
         <pre
           key={key}
-          className="mb-4 max-w-full overflow-x-hidden whitespace-pre-wrap rounded bg-gray-100 p-4 text-[0.875em] break-words"
+          className="my-6 max-w-full overflow-x-auto whitespace-pre-wrap rounded-lg border border-slate-200 bg-slate-50 p-4 font-mono text-[0.875em] leading-relaxed text-slate-900 break-words"
         >
           {children}
         </pre>
@@ -127,7 +127,7 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
       return (
         <code
           key={key}
-          className="max-w-full rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.9em] break-words [overflow-wrap:anywhere]"
+          className="max-w-full rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[0.9em] text-pink-600 border border-slate-200 break-words [overflow-wrap:anywhere]"
         >
           {children}
         </code>
