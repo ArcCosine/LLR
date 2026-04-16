@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Trash2, Plus, Save, X, Pencil, Check } from "lucide-react";
+import { Trash2, Plus, Save, X, Pencil } from "lucide-react";
 import type { Subscription } from "@/types";
 import { FeedEditDialog } from "./FeedEditDialog";
 
@@ -159,9 +159,11 @@ export function FeedManagementDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white p-4">
-      <header className="mb-4 flex flex-wrap items-center justify-between gap-4 border-b pb-4">
-        <h2 className="text-2xl font-bold text-gray-800">フィード管理</h2>
+    <div className="fixed inset-0 z-50 flex flex-col bg-white p-4 dark:bg-slate-900 transition-colors duration-300">
+      <header className="mb-4 flex flex-wrap items-center justify-between gap-4 border-b pb-4 dark:border-slate-800">
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-100">
+          フィード管理
+        </h2>
         <div className="flex flex-wrap gap-2">
           {selectedIndices.size > 0 && (
             <button
@@ -184,7 +186,7 @@ export function FeedManagementDialog({
           <button
             type="button"
             onClick={() => onSaveAll(localSubs)}
-            className="flex items-center gap-2 rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-2 rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors dark:bg-blue-700 dark:hover:bg-blue-800"
           >
             <Save size={16} />
             保存して閉じる
@@ -192,7 +194,7 @@ export function FeedManagementDialog({
           <button
             type="button"
             onClick={onClose}
-            className="flex items-center gap-2 rounded bg-gray-200 px-3 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-300 transition-colors"
+            className="flex items-center gap-2 rounded bg-gray-200 px-3 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-300 transition-colors dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
           >
             <X size={16} />
             キャンセル
@@ -200,23 +202,27 @@ export function FeedManagementDialog({
         </div>
       </header>
 
-      <div className="mb-3 flex items-center gap-2 text-sm text-gray-500 bg-gray-50 p-2 rounded border border-gray-100">
-        <span className="font-bold text-gray-700">ショートカット:</span>
+      <div className="mb-3 flex items-center gap-2 text-sm text-gray-500 bg-gray-50 p-2 rounded border border-gray-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400">
+        <span className="font-bold text-gray-700 dark:text-slate-300">
+          ショートカット:
+        </span>
         <span>j/k: 移動</span>
-        <span className="text-gray-300">|</span>
+        <span className="text-gray-300 dark:text-slate-600">|</span>
         <span>x: 選択</span>
-        <span className="text-gray-300">|</span>
+        <span className="text-gray-300 dark:text-slate-600">|</span>
         <span>e: 編集</span>
-        <span className="text-gray-300">|</span>
+        <span className="text-gray-300 dark:text-slate-600">|</span>
         <span>d: 削除</span>
-        <span className="text-gray-300">|</span>
-        <span className="bg-white px-1 border rounded text-xs font-bold text-blue-600 shadow-sm">ESC</span>
+        <span className="text-gray-300 dark:text-slate-600">|</span>
+        <span className="bg-white px-1 border rounded text-xs font-bold text-blue-600 shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-blue-400">
+          ESC
+        </span>
         <span>: 保存して閉じる</span>
       </div>
 
       <div
         ref={listRef}
-        className="flex-1 overflow-y-auto border border-gray-200 rounded shadow-inner bg-gray-50/30"
+        className="flex-1 overflow-y-auto border border-gray-200 rounded shadow-inner bg-gray-50/30 dark:border-slate-800 dark:bg-slate-950/30"
       >
         {localSubs.map((sub, index) => {
           const isFocused = index === focusedIndex;
@@ -227,9 +233,11 @@ export function FeedManagementDialog({
             // biome-ignore lint/a11y/noStaticElementInteractions: list item
             <div
               key={`${sub.xmlUrl}-${index}`}
-              className={`flex items-center gap-4 border-b p-3 last:border-0 transition-all ${
-                isFocused ? "bg-blue-50 ring-2 ring-inset ring-blue-500 z-10" : ""
-              } ${isSelected ? "bg-yellow-50" : "bg-white"}`}
+              className={`flex items-center gap-4 border-b p-3 last:border-0 transition-all dark:border-slate-800 ${
+                isFocused
+                  ? "bg-blue-50 ring-2 ring-inset ring-blue-500 z-10 dark:bg-blue-900/20"
+                  : ""
+              } ${isSelected ? "bg-yellow-50 dark:bg-amber-900/10" : "bg-white dark:bg-slate-900"}`}
               onClick={() => setFocusedIndex(index)}
             >
               <div className="flex items-center justify-center w-6">
@@ -237,14 +245,14 @@ export function FeedManagementDialog({
                   type="checkbox"
                   checked={isSelected}
                   onChange={() => toggleSelection(index)}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800"
                 />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="truncate font-bold text-gray-900">
+                <div className="truncate font-bold text-gray-900 dark:text-slate-100">
                   {sub.title}
                 </div>
-                <div className="truncate text-xs text-gray-500 font-mono mt-0.5">
+                <div className="truncate text-xs text-gray-500 font-mono mt-0.5 dark:text-slate-500">
                   {sub.xmlUrl}
                 </div>
               </div>
@@ -252,7 +260,7 @@ export function FeedManagementDialog({
                 <button
                   type="button"
                   onClick={() => setEditingIndex(index)}
-                  className="flex items-center gap-1.5 rounded border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 shadow-sm transition-colors"
+                  className="flex items-center gap-1.5 rounded border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                 >
                   <Pencil size={14} />
                   編集
@@ -260,7 +268,7 @@ export function FeedManagementDialog({
                 <button
                   type="button"
                   onClick={() => handleDelete(index)}
-                  className="flex items-center gap-1.5 rounded border border-red-200 bg-white px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 shadow-sm transition-colors"
+                  className="flex items-center gap-1.5 rounded border border-red-200 bg-white px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 shadow-sm transition-colors dark:border-red-900/50 dark:bg-slate-800 dark:text-red-400 dark:hover:bg-red-900/20"
                 >
                   <Trash2 size={14} />
                   削除

@@ -27,7 +27,8 @@ export function parseArticlesFromXml(xmlText: string): Article[] {
       "";
     const contentEncoded =
       node.getElementsByTagName("content:encoded")[0]?.textContent || "";
-    const dcContent = node.getElementsByTagName("dc:content")[0]?.textContent || "";
+    const dcContent =
+      node.getElementsByTagName("dc:content")[0]?.textContent || "";
     const description = node.querySelector("description")?.textContent || "";
     const preferredBody =
       dcContent.length > description.length ? dcContent : description;
@@ -217,11 +218,7 @@ export function parseSubscriptionsFromOpml(xmlText: string): Subscription[] {
     }
   };
 
-  if (
-    opmlObj &&
-    typeof opmlObj === "object" &&
-    (opmlObj as any).opml
-  ) {
+  if (opmlObj && typeof opmlObj === "object" && (opmlObj as any).opml) {
     collectOutlines((opmlObj as any).opml);
   } else {
     throw new Error("OPMLの解析に失敗しました。");

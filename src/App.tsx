@@ -16,7 +16,7 @@ import { FeedManagementDialog } from "@/components/FeedManagementDialog";
 import { HelpDialog } from "@/components/HelpDialog";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { OpmlImportPanel } from "@/components/OpmlImportPanel";
-import { FONT_SIZES, fontSizeAtom } from "@/lib/atoms";
+import { FONT_SIZES, darkModeAtom, fontSizeAtom } from "@/lib/atoms";
 import {
   clearAllCache,
   getCache,
@@ -52,7 +52,16 @@ export default function App() {
   const [importBusy, setImportBusy] = useState(false);
   const [importError, setImportError] = useState("");
   const [fontSizeIndex, setFontSizeIndex] = useAtom(fontSizeAtom);
+  const [darkMode] = useAtom(darkModeAtom);
   const [showFeedList, setShowFeedList] = useState(true);
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [darkMode]);
 
   const subListRef = useRef<HTMLDivElement>(null);
   const contentAreaRef = useRef<HTMLElement>(null);
@@ -615,7 +624,7 @@ export default function App() {
           />
         ) : (
           <div
-            className={`flex h-full min-h-0 overflow-hidden bg-white text-gray-800 leading-relaxed ${FONT_SIZES[fontSizeIndex]}`}
+            className={`flex h-full min-h-0 overflow-hidden bg-white text-gray-800 leading-relaxed dark:bg-slate-950 dark:text-slate-300 transition-colors duration-300 ${FONT_SIZES[fontSizeIndex]}`}
           >
             <FeedList
               subscriptions={subscriptions}
@@ -623,7 +632,6 @@ export default function App() {
               onSelectSubscription={setSelectedSubIndex}
               subListRef={subListRef}
               showFeedList={showFeedList}
-              onToggleFeedList={() => setShowFeedList((prev) => !prev)}
             />
             <ArticlePane
               articles={articles}
@@ -640,9 +648,12 @@ export default function App() {
                 type="button"
                 onClick={() => setShowClearDialog(true)}
                 title="Clear Cache"
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-lg border border-gray-200 transition-all hover:bg-red-50 active:scale-95 opacity-80 hover:opacity-100"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-lg border border-gray-200 transition-all hover:bg-red-50 active:scale-95 opacity-80 hover:opacity-100 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-red-900/30"
               >
-                <RotateCcw size={20} className="text-gray-600" />
+                <RotateCcw
+                  size={20}
+                  className="text-gray-600 dark:text-slate-400"
+                />
               </button>
               <button
                 type="button"
@@ -651,13 +662,16 @@ export default function App() {
                 }
                 disabled={selectedSubIndex <= 0}
                 title="Previous Feed (a)"
-                className={`flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-lg border border-gray-200 transition-all hover:bg-gray-50 active:scale-95 ${
+                className={`flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-lg border border-gray-200 transition-all hover:bg-gray-50 active:scale-95 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700 ${
                   selectedSubIndex <= 0
                     ? "opacity-30 pointer-events-none"
                     : "opacity-80 hover:opacity-100"
                 }`}
               >
-                <ChevronUp size={24} className="text-gray-600" />
+                <ChevronUp
+                  size={24}
+                  className="text-gray-600 dark:text-slate-400"
+                />
               </button>
               <button
                 type="button"
@@ -668,13 +682,16 @@ export default function App() {
                 }
                 disabled={selectedSubIndex >= subscriptions.length - 1}
                 title="Next Feed (s)"
-                className={`flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-lg border border-gray-200 transition-all hover:bg-gray-50 active:scale-95 ${
+                className={`flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-lg border border-gray-200 transition-all hover:bg-gray-50 active:scale-95 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700 ${
                   selectedSubIndex >= subscriptions.length - 1
                     ? "opacity-30 pointer-events-none"
                     : "opacity-80 hover:opacity-100"
                 }`}
               >
-                <ChevronDown size={24} className="text-gray-600" />
+                <ChevronDown
+                  size={24}
+                  className="text-gray-600 dark:text-slate-400"
+                />
               </button>
             </div>
 
@@ -683,16 +700,22 @@ export default function App() {
               type="button"
               onClick={() => setShowFeedList((prev) => !prev)}
               title={showFeedList ? "Hide sidebar (f)" : "Show sidebar (f)"}
-              className={`absolute bottom-4 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-lg border border-gray-300 hover:bg-gray-50 transition-all duration-300 ease-in-out ${
+              className={`absolute bottom-4 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-lg border border-gray-300 hover:bg-gray-50 transition-all duration-300 ease-in-out dark:bg-slate-800 dark:border-slate-600 dark:hover:bg-slate-700 ${
                 showFeedList
                   ? "left-64 max-md:left-52 -translate-x-1/2"
                   : "left-4"
               }`}
             >
               {showFeedList ? (
-                <PanelLeftClose size={18} className="text-gray-600" />
+                <PanelLeftClose
+                  size={18}
+                  className="text-gray-600 dark:text-slate-400"
+                />
               ) : (
-                <PanelLeftOpen size={18} className="text-gray-600" />
+                <PanelLeftOpen
+                  size={18}
+                  className="text-gray-600 dark:text-slate-400"
+                />
               )}
             </button>
           </div>

@@ -22,8 +22,8 @@ export function ArticlePane({
   selectedSubscription,
 }: ArticlePaneProps) {
   return (
-    <div className="flex min-w-0 flex-1 flex-col">
-      <section className="border-b border-gray-300 bg-gray-200 px-3 py-2">
+    <div className="flex min-w-0 flex-1 flex-col transition-colors duration-300">
+      <section className="border-b border-gray-300 bg-gray-200 px-3 py-2 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200">
         <div className="truncate font-bold">
           Articles
           {selectedSubscription ? ` - ${selectedSubscription.title}` : ""}
@@ -32,7 +32,7 @@ export function ArticlePane({
 
       <main
         ref={contentAreaRef}
-        className="relative flex-1 overflow-y-auto bg-white"
+        className="relative flex-1 overflow-y-auto bg-white dark:bg-slate-900 transition-colors duration-300"
       >
         {articles.length > 0 ? (
           <div className="mx-auto max-w-4xl px-6 py-8 max-md:px-4">
@@ -43,16 +43,18 @@ export function ArticlePane({
                   articleRefs.current[index] = node;
                 }}
                 className={`scroll-mt-8 pb-10 ${
-                  index < articles.length - 1 ? "mb-10 border-b border-gray-200" : ""
+                  index < articles.length - 1
+                    ? "mb-10 border-b border-gray-200 dark:border-slate-800"
+                    : ""
                 }`}
                 data-selected={index === selectedArticleIndex}
               >
-                <header className="mb-8 border-b border-gray-100 pb-4">
+                <header className="mb-8 border-b border-gray-100 pb-4 dark:border-slate-800/60">
                   <h2
-                    className={`mb-3 rounded-md px-4 py-3 text-[1.5em] font-bold leading-tight ${
+                    className={`mb-3 rounded-md px-4 py-3 text-[1.5em] font-bold leading-tight transition-colors ${
                       index === selectedArticleIndex
-                        ? "bg-sky-100 text-sky-950"
-                        : "bg-slate-100 text-slate-900"
+                        ? "bg-sky-100 text-sky-950 dark:bg-blue-900/40 dark:text-blue-200 dark:ring-1 dark:ring-blue-500/30"
+                        : "bg-slate-100 text-slate-900 dark:bg-slate-800/50 dark:text-slate-100"
                     }`}
                   >
                     <a
@@ -64,20 +66,20 @@ export function ArticlePane({
                       {article.title}
                     </a>
                   </h2>
-                  <div className="flex justify-between gap-4 text-[0.875em] text-gray-500 max-md:flex-col">
+                  <div className="flex justify-between gap-4 text-[0.875em] text-gray-500 dark:text-slate-400 max-md:flex-col">
                     <span>{formatPubDate(article.pubDate)}</span>
                     <a
                       href={article.link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="shrink-0 text-blue-600 hover:underline"
+                      className="shrink-0 text-blue-600 hover:underline dark:text-amber-500"
                     >
                       Original Site →
                     </a>
                   </div>
                 </header>
                 <div
-                  className={`prose max-w-none break-words leading-relaxed ${FONT_SIZES[fontSizeIndex]}`}
+                  className={`prose dark:prose-invert max-w-none break-words leading-relaxed ${FONT_SIZES[fontSizeIndex]}`}
                 >
                   <ArticleContent content={article.content} />
                 </div>
@@ -85,7 +87,7 @@ export function ArticlePane({
             ))}
           </div>
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+          <div className="absolute inset-0 flex items-center justify-center text-gray-400 dark:text-slate-600">
             No articles found.
           </div>
         )}

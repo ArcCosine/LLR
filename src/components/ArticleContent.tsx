@@ -69,7 +69,10 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
       );
     case "p":
       return (
-        <p key={key} className="mb-4 max-w-full [overflow-wrap:anywhere] leading-relaxed">
+        <p
+          key={key}
+          className="mb-4 max-w-full [overflow-wrap:anywhere] leading-relaxed"
+        >
           {children}
         </p>
       );
@@ -81,7 +84,7 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
           href={href}
           target={href?.startsWith("http") ? "_blank" : undefined}
           rel={href?.startsWith("http") ? "noopener noreferrer" : undefined}
-          className="text-blue-600 underline inline-block"
+          className="text-blue-600 dark:text-blue-400 underline inline-block"
         >
           {children}
         </a>
@@ -89,19 +92,28 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
     }
     case "ul":
       return (
-        <ul key={key} className="mb-4 max-w-full list-disc pl-6 [overflow-wrap:anywhere]">
+        <ul
+          key={key}
+          className="mb-4 max-w-full list-disc pl-6 [overflow-wrap:anywhere] dark:text-slate-300"
+        >
           {children}
         </ul>
       );
     case "ol":
       return (
-        <ol key={key} className="mb-4 max-w-full list-decimal pl-6 [overflow-wrap:anywhere]">
+        <ol
+          key={key}
+          className="mb-4 max-w-full list-decimal pl-6 [overflow-wrap:anywhere] dark:text-slate-300"
+        >
           {children}
         </ol>
       );
     case "li":
       return (
-        <li key={key} className="mb-1 max-w-full [overflow-wrap:anywhere]">
+        <li
+          key={key}
+          className="mb-1 max-w-full [overflow-wrap:anywhere] dark:text-slate-300"
+        >
           {children}
         </li>
       );
@@ -109,7 +121,7 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
       return (
         <blockquote
           key={key}
-          className="my-6 max-w-full border-l-4 border-slate-300 bg-slate-50 py-2 pl-4 pr-4 text-gray-700 italic [overflow-wrap:anywhere]"
+          className="my-6 max-w-full border-l-4 border-slate-300 bg-slate-50 py-2 pl-4 pr-4 text-gray-700 italic [overflow-wrap:anywhere] dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-400"
         >
           {children}
         </blockquote>
@@ -118,7 +130,7 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
       return (
         <pre
           key={key}
-          className="my-6 max-w-full overflow-x-auto whitespace-pre-wrap rounded-lg border border-slate-200 bg-slate-50 p-4 font-mono text-[0.875em] leading-relaxed text-slate-900 break-words"
+          className="my-6 max-w-full overflow-x-auto whitespace-pre-wrap rounded-lg border border-slate-200 bg-slate-50 p-4 font-mono text-[0.875em] leading-relaxed text-slate-900 break-words dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
         >
           {children}
         </pre>
@@ -127,7 +139,7 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
       return (
         <code
           key={key}
-          className="max-w-full rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[0.9em] text-pink-600 border border-slate-200 break-words [overflow-wrap:anywhere]"
+          className="max-w-full rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[0.9em] text-pink-600 border border-slate-200 break-words [overflow-wrap:anywhere] dark:bg-slate-900 dark:text-pink-400 dark:border-slate-800"
         >
           {children}
         </code>
@@ -136,19 +148,34 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
       const src = getSafeUrl(element.getAttribute("src"));
       const alt = element.getAttribute("alt") || "";
       return src ? (
-        <img key={key} src={src} alt={alt} className="my-6 h-auto max-w-full" />
+        <img
+          key={key}
+          src={src}
+          alt={alt}
+          className="my-6 h-auto max-w-full rounded dark:opacity-90 transition-opacity"
+        />
       ) : null;
     }
     case "br":
       return <br key={key} />;
     case "hr":
-      return <hr key={key} className="my-6 border-gray-200" />;
+      return (
+        <hr key={key} className="my-6 border-gray-200 dark:border-slate-800" />
+      );
     case "strong":
     case "b":
-      return <strong key={key}>{children}</strong>;
+      return (
+        <strong key={key} className="dark:text-slate-100">
+          {children}
+        </strong>
+      );
     case "em":
     case "i":
-      return <em key={key}>{children}</em>;
+      return (
+        <em key={key} className="dark:text-slate-300">
+          {children}
+        </em>
+      );
     case "figure":
       return (
         <figure key={key} className="my-6 max-w-full overflow-hidden">
@@ -159,7 +186,7 @@ function renderHtmlNode(node: ChildNode, key: string): ReactNode {
       return (
         <figcaption
           key={key}
-          className="mt-2 max-w-full text-[0.875em] text-gray-500 [overflow-wrap:anywhere]"
+          className="mt-2 max-w-full text-[0.875em] text-gray-500 dark:text-slate-500 [overflow-wrap:anywhere]"
         >
           {children}
         </figcaption>

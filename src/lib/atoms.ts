@@ -12,3 +12,4 @@ export const FONT_SIZES = [
 ];
 
 export const fontSizeAtom = atomWithStorage<number>("llr-font-size-index", 0);
+export const darkModeAtom = atomWithStorage<boolean>("llr-dark-mode", false);
