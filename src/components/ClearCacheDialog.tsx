@@ -11,14 +11,15 @@ export function ClearCacheDialog({
 }: ClearCacheDialogProps) {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "y") {
+      const key = event.key.toLowerCase();
+      if (key === "y") {
         event.preventDefault();
         void onConfirm();
         return;
       }
 
       if (
-        event.key === "n" ||
+        key === "n" ||
         event.key === "Escape" ||
         (event.ctrlKey && event.key === "[")
       ) {
@@ -46,14 +47,14 @@ export function ClearCacheDialog({
             onClick={onCancel}
             className="rounded px-4 py-2 text-gray-600 transition-colors hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-700"
           >
-            いいえ
+            いいえ (n)
           </button>
           <button
             type="button"
             onClick={onConfirm}
             className="rounded bg-red-600 px-4 py-2 text-white transition-colors hover:bg-red-700"
           >
-            はい、削除します
+            はい、削除します (y)
           </button>
         </div>
       </div>

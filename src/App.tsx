@@ -739,6 +739,7 @@ export default function App() {
           onCancel={() => setShowClearDialog(false)}
           onConfirm={async () => {
             await clearAllCache();
+            setSelectedSubIndex(0);
             setShowClearDialog(false);
             window.location.reload();
           }}
