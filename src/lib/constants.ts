@@ -1,0 +1,3 @@
+export const CACHE_EXPIRATION_MS = 1000 * 60 * 30;
+export const PAGE_SCROLL_RATIO = 0.9;
+export const INITIAL_STARTUP_REFRESH_COUNT = 30;

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { Subscription } from "@/types";
 import { buildRssRequestUrl, parseMetadataFromXml } from "@/lib/feed";
+import type { Subscription } from "@/types";
 
 type FeedEditDialogProps = {
   feed: Subscription | null; // null for new feed
@@ -89,7 +89,7 @@ export function FeedEditDialog({
                 disabled={loading}
                 // biome-ignore lint/a11y/noAutofocus: needed for UX
                 autoFocus
-                />
+              />
 
               <p className="mt-2 text-xs text-gray-500 dark:text-slate-500">
                 タイトルとサイトURLはフィードの内容から自動取得されます。
@@ -113,8 +113,7 @@ export function FeedEditDialog({
                   required
                   // biome-ignore lint/a11y/noAutofocus: needed for UX
                   autoFocus
-                  />
-
+                />
               </div>
               <div>
                 <label

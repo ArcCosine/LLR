@@ -1,5 +1,5 @@
-import type { Article, Subscription } from "@/types";
 import { XMLParser } from "fast-xml-parser";
+import type { Article, Subscription } from "@/types";
 
 export const RSS_API_BASE_URL =
   import.meta.env.VITE_RSS_API_BASE_URL ||
@@ -199,7 +199,7 @@ export function parseSubscriptionsFromOpml(xmlText: string): Subscription[] {
       return;
     }
 
-    if (Object.prototype.hasOwnProperty.call(node, "outline")) {
+    if (Object.hasOwn(node, "outline")) {
       const o = (node as any).outline;
       if (Array.isArray(o)) {
         for (const child of o) {

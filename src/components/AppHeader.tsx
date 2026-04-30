@@ -1,12 +1,12 @@
 import { useAtom } from "jotai";
 import {
-  Settings,
-  Download,
-  Upload,
-  List,
   ChevronDown,
-  Sun,
+  Download,
+  List,
   Moon,
+  Settings,
+  Sun,
+  Upload,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { darkModeAtom } from "@/lib/atoms";
@@ -82,7 +82,6 @@ export function AppHeader({
                 focus:outline-none font-bold text-sm
               `}
             >
-
               <div className="flex items-center gap-2">
                 <Settings
                   size={16}

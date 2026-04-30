@@ -109,6 +109,12 @@ export function HelpDialog({ onClose }: HelpDialogProps) {
               </div>
               <div className="flex items-center gap-2">
                 <kbd className="rounded border bg-gray-100 px-1.5 py-0.5 font-mono text-xs dark:bg-slate-900 dark:border-slate-700 dark:text-slate-400">
+                  t
+                </kbd>
+                <span>テーマを切り替え</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <kbd className="rounded border bg-gray-100 px-1.5 py-0.5 font-mono text-xs dark:bg-slate-900 dark:border-slate-700 dark:text-slate-400">
                   ?
                 </kbd>
                 <span>ヘルプを表示</span>
